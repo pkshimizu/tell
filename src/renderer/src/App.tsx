@@ -1,7 +1,7 @@
 import { Box, Container, Typography, Button, Stack } from '@mui/material'
 import { Description, Send } from '@mui/icons-material'
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
+import Versions from '@renderer/components/Versions'
+import electronLogo from '@renderer/assets/electron.svg'
 
 function App(): JSX.Element {
   const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')

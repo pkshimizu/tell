@@ -45,12 +45,32 @@ The application follows Electron's standard three-process architecture:
 
 ### Path Aliases
 
-Two path aliases are configured for cleaner imports:
+Path aliases are configured for cleaner and maintainable imports. **Always use absolute path imports with aliases instead of relative paths** (e.g., `./` or `../`).
 
-- `@main/*` → `src/main/*`
+Available aliases:
+
 - `@renderer/*` → `src/renderer/src/*`
+- `@main/*` → `src/main/*`
+- `@preload/*` → `src/preload/*`
+- `@resources/*` → `resources/*`
 
 These work in both main process (tsconfig.node.json) and renderer process (tsconfig.web.json).
+
+**Example:**
+
+```typescript
+// ✅ Good - use path aliases
+import App from '@renderer/App'
+import { theme } from '@renderer/theme'
+import icon from '@resources/icon.png?asset'
+
+// ❌ Bad - avoid relative paths
+import App from './App'
+import { theme } from './theme'
+import icon from '../../resources/icon.png?asset'
+```
+
+ESLint is configured to enforce this rule with `import/no-relative-parent-imports` and `import/no-relative-packages`.
 
 ### TypeScript Configuration
 
