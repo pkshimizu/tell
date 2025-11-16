@@ -1,3 +1,5 @@
+import { Box, Container, Typography, Button, Stack } from '@mui/material'
+import { Description, Send } from '@mui/icons-material'
 import Versions from './components/Versions'
 import electronLogo from './assets/electron.svg'
 
@@ -5,30 +7,64 @@ function App(): JSX.Element {
   const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
+    <Container maxWidth="md">
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          minHeight: '100vh',
+          py: 4
+        }}
+      >
+        <Box
+          component="img"
+          src={electronLogo}
+          alt="logo"
+          sx={{
+            width: 120,
+            height: 120,
+            mb: 2
+          }}
+        />
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Powered by electron-vite
+        </Typography>
+        <Typography variant="h5" component="h1" gutterBottom sx={{ mt: 2 }}>
+          Build an Electron app with{' '}
+          <Box component="span" sx={{ color: 'primary.main' }}>
+            React
+          </Box>{' '}
+          and{' '}
+          <Box component="span" sx={{ color: 'secondary.main' }}>
+            TypeScript
+          </Box>
+        </Typography>
+        <Typography variant="h6" component="h2" color="text.secondary" sx={{ mt: 1 }}>
+          Noto Sans JPフォントで日本語表示
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Please try pressing <code>F12</code> to open the devTool
+        </Typography>
+        <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+          <Button
+            variant="contained"
+            startIcon={<Description />}
+            href="https://electron-vite.org/"
+            target="_blank"
+            rel="noreferrer"
+          >
             Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
+          </Button>
+          <Button variant="outlined" startIcon={<Send />} onClick={ipcHandle}>
             Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
+          </Button>
+        </Stack>
+        <Box sx={{ mt: 4 }}>
+          <Versions />
+        </Box>
+      </Box>
+    </Container>
   )
 }
 
