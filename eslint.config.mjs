@@ -31,5 +31,11 @@ export default tseslint.config(
       'import/no-relative-parent-imports': 'error'
     }
   },
+  {
+    files: ['**/*.tsx'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
   eslintConfigPrettier
 )
