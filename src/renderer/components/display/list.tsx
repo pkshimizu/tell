@@ -1,12 +1,5 @@
-import {
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material'
+import { List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material'
 import type { ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
 
 interface Item {
   id: string
@@ -14,7 +7,6 @@ interface Item {
   icon?: ReactNode
   selected?: boolean
   hide?: boolean
-  href?: string
   onClick?: () => void
 }
 
@@ -22,20 +14,12 @@ interface Props {
   items: Item[]
 }
 
-function MListItem(props: { item: Item }) {
+function TListItem(props: { item: Item }) {
   const item = props.item
 
   if (item.onClick) {
     return (
       <ListItemButton onClick={item.onClick} selected={item.selected}>
-        {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-        <ListItemText primary={item.text} />
-      </ListItemButton>
-    )
-  }
-  if (item.href) {
-    return (
-      <ListItemButton to={item.href} selected={item.selected} component={Link}>
         {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
         <ListItemText primary={item.text} />
       </ListItemButton>
@@ -49,14 +33,14 @@ function MListItem(props: { item: Item }) {
   )
 }
 
-export default function MList(props: Props) {
+export default function TList(props: Props) {
   return (
     <List sx={{ padding: 0 }}>
-      {props.items.map(item => {
+      {props.items.map((item) => {
         if (item.hide) {
           return null
         }
-        return <MListItem key={item.id} item={item} />
+        return <TListItem key={item.id} item={item} />
       })}
     </List>
   )

@@ -1,5 +1,5 @@
 import Chip from '@mui/material/Chip'
-import type { ThemeColor } from '@/types/color.ts'
+import type { ThemeColor } from '@renderer/types/color.ts'
 
 interface Props {
   label: string
@@ -8,13 +8,6 @@ interface Props {
   color?: ThemeColor
 }
 
-export default function MChip(props: Props) {
-  return (
-    <Chip
-      label={props.label}
-      color={props.color}
-      size={props.size}
-      variant={props.variant}
-    />
-  )
+export default function TChip(props: Props) {
+  return <Chip label={props.label} color={props.color} size={props.size} variant={props.variant} />
 }

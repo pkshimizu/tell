@@ -1,11 +1,4 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from '@mui/material'
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
 import type { ReactNode } from 'react'
 
 interface Column {
@@ -25,10 +18,10 @@ interface Props {
   rows: Row[]
 }
 
-function MTableRow({ columns, row }: { columns: Column[]; row: Row }) {
+function TTableRow({ columns, row }: { columns: Column[]; row: Row }) {
   return (
     <TableRow>
-      {columns.map(column => (
+      {columns.map((column) => (
         <TableCell key={column.name} width={column.width} align={column.align}>
           {row.cells[column.name]}
         </TableCell>
@@ -37,26 +30,22 @@ function MTableRow({ columns, row }: { columns: Column[]; row: Row }) {
   )
 }
 
-export default function MTable({ columns, rows }: Props) {
+export default function TTable({ columns, rows }: Props) {
   return (
     <TableContainer>
       <Table size="small">
         <TableHead>
           <TableRow>
-            {columns.map(column => (
-              <TableCell
-                key={column.name}
-                width={column.width}
-                align={column.align}
-              >
+            {columns.map((column) => (
+              <TableCell key={column.name} width={column.width} align={column.align}>
                 {column.cell}
               </TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map(row => (
-            <MTableRow key={row.id} columns={columns} row={row} />
+          {rows.map((row) => (
+            <TTableRow key={row.id} columns={columns} row={row} />
           ))}
         </TableBody>
       </Table>

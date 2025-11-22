@@ -6,6 +6,6 @@ interface Props {
   size?: number
 }
 
-export default function MAvatar({ url, alt, size }: Props) {
+export default function TAvatar({ url, alt, size }: Props) {
   return <Avatar src={url} alt={alt} sx={{ width: size, height: size }} />
 }

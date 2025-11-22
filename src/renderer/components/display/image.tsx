@@ -8,7 +8,7 @@ interface Props {
   circle?: boolean
 }
 
-export default function MImage(props: Props) {
+export default function TImage(props: Props) {
   return (
     <img
       {...props}
@@ -17,7 +17,7 @@ export default function MImage(props: Props) {
         ...(props.height && { height: props.height }),
         ...(props.fullWidth && { width: '100%' }),
         ...(props.fullHeight && { height: '100%' }),
-        ...(props.circle && { borderRadius: '50%' }),
+        ...(props.circle && { borderRadius: '50%' })
       }}
     />
   )
