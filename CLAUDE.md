@@ -31,6 +31,12 @@ npm run build:mac              # Build macOS app
 npm run build:win              # Build Windows app
 npm run build:linux            # Build Linux app (AppImage, snap, deb)
 npm run build:unpack           # Build without packaging (for testing)
+
+# Database (Drizzle ORM)
+npm run db:generate            # Generate migration files from schema
+npm run db:migrate             # Apply migrations to database
+npm run db:push                # Push schema directly to database (dev only)
+npm run db:studio              # Launch Drizzle Studio (GUI tool)
 ```
 
 ## Architecture
@@ -49,7 +55,7 @@ Path aliases are configured for cleaner and maintainable imports. **Always use a
 
 Available aliases:
 
-- `@renderer/*` → `src/renderer/src/*`
+- `@renderer/*` → `src/renderer/*`
 - `@main/*` → `src/main/*`
 - `@preload/*` → `src/preload/*`
 - `@resources/*` → `resources/*`
@@ -100,3 +106,29 @@ When adding IPC handlers:
 - App ID: `com.electron.app`
 - Supports Windows (NSIS installer), macOS (DMG), and Linux (AppImage/snap/deb)
 - Auto-update capability via electron-updater (configured for generic provider)
+
+### Database (Drizzle ORM + SQLite)
+
+The application uses Drizzle ORM with SQLite for data persistence.
+
+**Directory Structure:**
+
+- `src/main/database/` - Database configuration and connection
+- `src/main/database/schemas/` - Table schema definitions
+- `src/main/database/migrations/` - Migration files (auto-generated)
+- `src/main/repositories/` - Repository classes for data access
+
+**Database Location:**
+
+- Development: `./data/app.db`
+- Production: User data directory (`app.getPath('userData')`)
+
+**Workflow:**
+
+1. Define schema in `src/main/database/schemas/`
+2. Export schema from `src/main/database/schemas/index.ts`
+3. Generate migration: `npm run db:generate`
+4. Apply migration: `npm run db:push` (dev) or `npm run db:migrate` (prod)
+5. Create Repository class in `src/main/repositories/` for data operations
+
+See `src/main/database/README.md` and `src/main/repositories/README.md` for detailed usage.
