@@ -66,7 +66,7 @@ These work in both main process (tsconfig.node.json) and renderer process (tscon
 
 ```typescript
 // ✅ Good - use path aliases
-import App from '@renderer/App'
+import TText from '@renderer/components/display/text'
 import { theme } from '@renderer/theme'
 import icon from '@resources/icon.png?asset'
 

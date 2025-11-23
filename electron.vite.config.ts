@@ -1,6 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 
 export default defineConfig({
   main: {
@@ -26,6 +27,16 @@ export default defineConfig({
         '@renderer': resolve('src/renderer')
       }
     },
-    plugins: [react()]
+    plugins: [
+      tanstackRouter({
+        target: 'react',
+        autoCodeSplitting: true,
+        routesDirectory: 'src/renderer/routes',
+        generatedRouteTree: 'src/renderer/routeTree.gen.ts',
+        routeFileIgnorePrefix: '-',
+        quoteStyle: 'single'
+      }),
+      react()
+    ]
   }
 })
