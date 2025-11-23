@@ -6,7 +6,7 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 import eslintPluginImport from 'eslint-plugin-import'
 
 export default tseslint.config(
-  { ignores: ['**/node_modules', '**/dist', '**/out'] },
+  { ignores: ['**/node_modules', '**/dist', '**/out', 'src/renderer/routeTree.gen.ts'] },
   tseslint.configs.recommended,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],
