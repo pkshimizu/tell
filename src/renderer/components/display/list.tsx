@@ -1,4 +1,5 @@
 import { List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material'
+import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 interface Item {
@@ -7,6 +8,7 @@ interface Item {
   icon?: ReactNode
   selected?: boolean
   hide?: boolean
+  href?: string
   onClick?: () => void
 }
 
@@ -19,10 +21,22 @@ function TListItem(props: { item: Item }) {
 
   if (item.onClick) {
     return (
-      <ListItemButton onClick={item.onClick} selected={item.selected}>
-        {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-        <ListItemText primary={item.text} />
-      </ListItemButton>
+      <ListItem disablePadding>
+        <ListItemButton onClick={item.onClick} selected={item.selected}>
+          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+          <ListItemText primary={item.text} />
+        </ListItemButton>
+      </ListItem>
+    )
+  }
+  if (item.href) {
+    return (
+      <ListItem disablePadding>
+        <ListItemButton to={item.href} selected={item.selected} component={Link}>
+          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+          <ListItemText primary={item.text} />
+        </ListItemButton>
+      </ListItem>
     )
   }
   return (
