@@ -9,9 +9,17 @@ interface Props {
   variant: 'permanent' | 'persistent' | 'temporary'
   children: ReactNode
   onClose?: () => void
+  width?: string | number
 }
 
-export default function TDrawer({ anchor = 'left', open, variant, children, onClose }: Props) {
+export default function TDrawer({
+  anchor = 'left',
+  open,
+  variant,
+  children,
+  onClose,
+  width
+}: Props) {
   const handleClose = useCallback(() => {
     if (onClose) {
       onClose()
@@ -19,7 +27,19 @@ export default function TDrawer({ anchor = 'left', open, variant, children, onCl
   }, [onClose])
 
   return (
-    <Drawer anchor={anchor} open={open} variant={variant} onClose={handleClose}>
+    <Drawer
+      anchor={anchor}
+      open={open}
+      variant={variant}
+      onClose={handleClose}
+      PaperProps={
+        width
+          ? {
+              sx: { width }
+            }
+          : undefined
+      }
+    >
       {children}
     </Drawer>
   )
