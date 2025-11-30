@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '@resources/icon.png?asset'
+import { githubService } from '@main/services/github-service'
 
 function createWindow(): void {
   // Create the browser window.
@@ -51,6 +52,19 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // GitHub Service IPC handlers
+  ipcMain.handle('github:createAccount', async (_, personalAccessToken: string) => {
+    try {
+      const account = await githubService.createAccount(personalAccessToken)
+      return { success: true, data: account }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
 
   createWindow()
 

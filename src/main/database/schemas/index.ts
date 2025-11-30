@@ -4,3 +4,4 @@
  */
 
 export * from './example'
+export * from './github-account'

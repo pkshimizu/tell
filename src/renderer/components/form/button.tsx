@@ -1,6 +1,8 @@
 import { Button } from '@mui/material'
 import { type ReactNode, useCallback } from 'react'
 import { type ThemeColor } from '@renderer/types/color'
+import TCircularProgress from '@renderer/components/feedback/circular-progress'
+import { TRow } from '@renderer/components/layout/flex-box'
 
 interface Props {
   variant?: 'contained' | 'outlined' | 'text'
@@ -14,6 +16,7 @@ interface Props {
   type?: 'button' | 'submit' | 'reset'
   href?: string
   disabled?: boolean
+  processing?: boolean
   children: ReactNode
 }
 
@@ -29,6 +32,7 @@ export default function TButton({
   type,
   href,
   disabled,
+  processing,
   children
 }: Props) {
   const handleClick = useCallback(() => {
@@ -55,7 +59,10 @@ export default function TButton({
         ...(fullHeight && { height: '100%' })
       }}
     >
-      {children}
+      <TRow>
+        {processing && <TCircularProgress size={24} />}
+        {children}
+      </TRow>
     </Button>
   )
 }

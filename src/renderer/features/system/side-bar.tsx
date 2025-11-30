@@ -8,7 +8,7 @@ export default function SideBar() {
   const matchRoute = useMatchRoute()
 
   return (
-    <TDrawer open={true} variant={'permanent'}>
+    <TDrawer open={true} variant={'permanent'} width={160}>
       <TList
         items={[
           {
@@ -20,7 +20,7 @@ export default function SideBar() {
           },
           {
             id: 'setting',
-            text: 'Setting',
+            text: 'Settings',
             icon: <SettingsIcon />,
             selected: matchRoute({ to: '/settings', fuzzy: true }) as boolean,
             href: '/settings'
