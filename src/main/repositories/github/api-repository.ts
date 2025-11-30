@@ -8,7 +8,7 @@ interface GitHubUserResponse {
   [key: string]: unknown
 }
 
-interface GitHubTokenInfo {
+interface GitHubTokenResponse {
   expires_at?: string | null
   [key: string]: unknown
 }
@@ -16,7 +16,7 @@ interface GitHubTokenInfo {
 export class GitHubApiRepository {
   private readonly baseUrl = 'https://api.github.com'
 
-  async getAccountInfo(personalAccessToken: string): Promise<GitHubApiAccount> {
+  async getAccount(personalAccessToken: string): Promise<GitHubApiAccount> {
     const response = await fetch(`${this.baseUrl}/user`, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
@@ -70,7 +70,7 @@ export class GitHubApiRepository {
       }
 
       // レスポンスボディから有効期限を確認（Fine-grained tokenの場合）
-      const data = (await response.json()) as GitHubTokenInfo
+      const data = (await response.json()) as GitHubTokenResponse
       if (data.expires_at) {
         return new Date(data.expires_at)
       }
