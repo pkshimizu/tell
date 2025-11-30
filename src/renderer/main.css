@@ -1,0 +1,25 @@
+html {
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  cursor: default;
+  overflow-x: hidden;
+}
+
+input,
+textarea,
+select,
+button,
+img {
+  -webkit-user-drag: none;
+}
+
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.selectable {
+  -webkit-user-select: auto;
+  user-select: auto;
+  cursor: auto;
+}

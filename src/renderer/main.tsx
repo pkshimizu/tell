@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { theme } from '@renderer/theme'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { routeTree } from '@renderer/routeTree.gen'
+import '@renderer/main.css'
 
 // Create a new router instance
 const router = createRouter({
