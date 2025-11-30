@@ -22,7 +22,7 @@ function TListItem(props: { item: Item }) {
   if (item.onClick) {
     return (
       <ListItem disablePadding>
-        <ListItemButton onClick={item.onClick} selected={item.selected}>
+        <ListItemButton onClick={item.onClick} selected={!!item.selected}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
           <ListItemText primary={item.text} />
         </ListItemButton>
@@ -32,7 +32,7 @@ function TListItem(props: { item: Item }) {
   if (item.href) {
     return (
       <ListItem disablePadding>
-        <ListItemButton to={item.href} selected={item.selected} component={Link}>
+        <ListItemButton to={item.href} selected={!!item.selected} component={Link}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
           <ListItemText primary={item.text} />
         </ListItemButton>

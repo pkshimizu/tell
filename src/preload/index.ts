@@ -5,7 +5,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   github: {
     createAccount: (personalAccessToken: string) =>
-      ipcRenderer.invoke('github:createAccount', personalAccessToken)
+      ipcRenderer.invoke('github:createAccount', personalAccessToken),
+    getAccounts: () => ipcRenderer.invoke('github:getAccounts')
   }
 }
 

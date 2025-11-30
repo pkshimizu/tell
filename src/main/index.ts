@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '@resources/icon.png?asset'
 import { githubService } from '@main/services/github-service'
+import { githubAccountRepository } from '@main/repositories/github/account-repository'
 
 function createWindow(): void {
   // Create the browser window.
@@ -58,6 +59,17 @@ app.whenReady().then(() => {
     try {
       const account = await githubService.createAccount(personalAccessToken)
       return { success: true, data: account }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
+  ipcMain.handle('github:getAccounts', async () => {
+    try {
+      const accounts = await githubAccountRepository.findAll()
+      return { success: true, data: accounts }
     } catch (error) {
       return {
         success: false,
