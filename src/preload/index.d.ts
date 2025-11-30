@@ -7,6 +7,11 @@ interface GitHubAPI {
     data?: GithubAccount
     error?: string
   }>
+  getAccounts: () => Promise<{
+    success: boolean
+    data?: GithubAccount[]
+    error?: string
+  }>
 }
 
 interface API {
