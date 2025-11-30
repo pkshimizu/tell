@@ -6,6 +6,7 @@ import TTextField from '@renderer/components/form/text-field'
 import TButton from '@renderer/components/form/button'
 import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TText from '@renderer/components/display/text'
+import useResolver from '@renderer/hooks/resolver'
 
 export const Route = createFileRoute('/settings/github')({
   component: RouteComponent
@@ -16,11 +17,14 @@ interface FormData {
 }
 
 function RouteComponent() {
+  const resolver = useResolver()
   const {
     register,
     handleSubmit,
     formState: { errors }
-  } = useForm<FormData>()
+  } = useForm<FormData>({
+    resolver: resolver.githubPersonalAccessTokenRegister
+  })
 
   const onSubmit = (data: FormData) => {
     // TODO: 保存処理を実装
@@ -28,7 +32,7 @@ function RouteComponent() {
   }
 
   return (
-    <TColumn gap={2}>
+    <TColumn gap={2} fullWidth>
       <TText variant="title">GitHub Settings</TText>
       <TForm onSubmit={handleSubmit(onSubmit)}>
         <TFormItem label="Personal Access Token">
