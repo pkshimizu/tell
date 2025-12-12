@@ -1,7 +1,7 @@
 import { githubApiRepository } from '@main/repositories/github/api-repository'
 import { githubAccountRepository } from '@main/repositories/github/account-repository'
 import type { GithubAccount } from '@main/database/schemas'
-import type { GitHubApiOrganization, GitHubApiRepository } from '@main/models/github'
+import type { GitHubApiOwner, GitHubApiRepository } from '@main/models/github'
 
 /**
  * GitHubアカウント管理サービス
@@ -40,12 +40,12 @@ export class GitHubService {
   }
 
   /**
-   * GitHubアカウントIDから組織一覧を取得する
+   * GitHubアカウントIDからオーナー一覧を取得する
    * @param accountId - GitHubアカウントID
-   * @returns 組織一覧
+   * @returns オーナー一覧
    * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
    */
-  async getOrganizations(accountId: number): Promise<GitHubApiOrganization[]> {
+  async getOwners(accountId: number): Promise<GitHubApiOwner[]> {
     // DBからアカウント情報を取得
     const account = await githubAccountRepository.findById(accountId)
     if (!account) {
@@ -53,20 +53,23 @@ export class GitHubService {
     }
 
     // GitHub APIから組織一覧を取得
-    return await githubApiRepository.getOrganizations(account.personalAccessToken)
+    const owners = await githubApiRepository.getOwners(account.personalAccessToken)
+    const accountOwner: GitHubApiOwner = {
+      login: account.login,
+      htmlUrl: account.htmlUrl,
+      avatarUrl: account.avatarUrl
+    }
+    return [accountOwner, ...owners]
   }
 
   /**
-   * GitHubアカウントIDと組織名からリポジトリ一覧を取得する
+   * GitHubアカウントIDとオーナー名からリポジトリ一覧を取得する
    * @param accountId - GitHubアカウントID
-   * @param organizationLogin - 組織名
+   * @param ownerLogin - オーナー名
    * @returns リポジトリ一覧
    * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
    */
-  async getRepositories(
-    accountId: number,
-    organizationLogin: string
-  ): Promise<GitHubApiRepository[]> {
+  async getRepositories(accountId: number, ownerLogin: string): Promise<GitHubApiRepository[]> {
     // DBからアカウント情報を取得
     const account = await githubAccountRepository.findById(accountId)
     if (!account) {
@@ -74,7 +77,7 @@ export class GitHubService {
     }
 
     // GitHub APIからリポジトリ一覧を取得
-    return await githubApiRepository.getRepositories(account.personalAccessToken, organizationLogin)
+    return await githubApiRepository.getRepositories(account.personalAccessToken, ownerLogin)
   }
 }
 

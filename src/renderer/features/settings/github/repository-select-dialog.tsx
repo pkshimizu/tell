@@ -14,7 +14,7 @@ interface Props {
   onClose: () => void
 }
 
-interface Organization {
+interface Owner {
   login: string
   htmlUrl: string
   avatarUrl: string
@@ -30,7 +30,7 @@ interface FormValues {
 }
 
 export default function GitHubRepositorySelectDialog(props: Props) {
-  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [owners, setOwners] = useState<Owner[]>([])
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -45,9 +45,9 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   useEffect(() => {
     if (props.open && props.accountId) {
       ;(async () => {
-        const result = await window.api.github.getOrganizations(props.accountId!)
+        const result = await window.api.github.getOwners(props.accountId!)
         if (result.success && result.data) {
-          setOrganizations(result.data)
+          setOwners(result.data)
         }
       })()
     }
@@ -75,7 +75,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
           <TSelect
             control={control}
             name="organization"
-            items={organizations.map((org) => ({
+            items={owners.map((org) => ({
               value: org.login,
               label: org.login
             }))}

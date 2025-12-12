@@ -16,7 +16,7 @@ interface GitHubAPI {
     data?: GithubAccount[]
     error?: string
   }>
-  getOrganizations: (accountId: number) => Promise<{
+  getOwners: (accountId: number) => Promise<{
     success: boolean
     data?: GitHubApiOrganization[]
     error?: string

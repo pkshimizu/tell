@@ -5,10 +5,10 @@ export interface GitHubApiAccount {
   avatarUrl: string
 }
 
-export interface GitHubApiOrganization {
+export interface GitHubApiOwner {
   login: string
   htmlUrl: string
-  avatarUrl: string
+  avatarUrl: string | null
 }
 
 export interface GitHubApiRepository {

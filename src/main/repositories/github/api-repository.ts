@@ -1,6 +1,6 @@
 import {
   GitHubApiAccount,
-  GitHubApiOrganization,
+  GitHubApiOwner,
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
 
@@ -101,7 +101,7 @@ export class GitHubApiRepository {
     }
   }
 
-  async getOrganizations(personalAccessToken: string): Promise<GitHubApiOrganization[]> {
+  async getOwners(personalAccessToken: string): Promise<GitHubApiOwner[]> {
     const response = await fetch(`${this.baseUrl}/user/orgs`, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
@@ -113,7 +113,7 @@ export class GitHubApiRepository {
     if (!response.ok) {
       const errorBody = await response.text()
       throw new Error(
-        `Failed to fetch GitHub organizations: ${response.status} ${response.statusText} - ${errorBody}`
+        `Failed to fetch GitHub owners: ${response.status} ${response.statusText} - ${errorBody}`
       )
     }
 
@@ -128,9 +128,9 @@ export class GitHubApiRepository {
 
   async getRepositories(
     personalAccessToken: string,
-    organizationLogin: string
+    ownerLogin: string
   ): Promise<GitHubApiRepositoryModel[]> {
-    const response = await fetch(`${this.baseUrl}/orgs/${organizationLogin}/repos`, {
+    const response = await fetch(`${this.baseUrl}/orgs/${ownerLogin}/repos`, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
