@@ -1,4 +1,4 @@
-import { GitHubApiAccount } from '@main/models/github'
+import { GitHubApiAccount, GitHubApiOrganization } from '@main/models/github'
 
 interface GitHubUserResponse {
   login: string
@@ -10,6 +10,13 @@ interface GitHubUserResponse {
 
 interface GitHubTokenResponse {
   expires_at?: string | null
+  [key: string]: unknown
+}
+
+interface GitHubOrganizationResponse {
+  login: string
+  html_url: string
+  avatar_url: string
   [key: string]: unknown
 }
 
@@ -82,6 +89,31 @@ export class GitHubApiRepository {
       console.warn('Failed to fetch token expiration:', error)
       return null
     }
+  }
+
+  async getOrganizations(personalAccessToken: string): Promise<GitHubApiOrganization[]> {
+    const response = await fetch(`${this.baseUrl}/user/orgs`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch GitHub organizations: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubOrganizationResponse[]
+
+    return data.map((org) => ({
+      login: org.login,
+      htmlUrl: org.html_url,
+      avatarUrl: org.avatar_url
+    }))
   }
 }
 

@@ -4,3 +4,9 @@ export interface GitHubApiAccount {
   htmlUrl: string
   avatarUrl: string
 }
+
+export interface GitHubApiOrganization {
+  login: string
+  htmlUrl: string
+  avatarUrl: string
+}
