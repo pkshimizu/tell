@@ -78,6 +78,53 @@ import icon from '../../resources/icon.png?asset'
 
 ESLint is configured to enforce this rule with `import/no-relative-parent-imports` and `import/no-relative-packages`.
 
+### Renderer Process (UI Components)
+
+**Component Usage Rules:**
+
+To maintain UI consistency across the application, follow these strict component usage rules:
+
+1. **Routes and Features** (`src/renderer/routes/` and `src/renderer/features/`):
+   - MUST use only components from `src/renderer/components/`
+   - DO NOT use raw HTML tags (e.g., `<div>`, `<button>`, `<input>`)
+   - DO NOT use external library components directly (e.g., Material-UI components)
+   - All UI elements should be wrapped in custom components from `@renderer/components/`
+
+2. **Components** (`src/renderer/components/`):
+   - CAN use raw HTML tags
+   - CAN use external library components (e.g., Material-UI)
+   - Should provide a consistent API for features and routes to use
+
+**Example:**
+
+```typescript
+// ✅ Good - in routes/features
+import TButton from '@renderer/components/form/button'
+import TText from '@renderer/components/display/text'
+import { TColumn } from '@renderer/components/layout/flex-box'
+
+function MyFeature() {
+  return (
+    <TColumn>
+      <TText>Hello</TText>
+      <TButton onClick={handleClick}>Click me</TButton>
+    </TColumn>
+  )
+}
+
+// ❌ Bad - in routes/features
+import { Button, Typography } from '@mui/material'
+
+function MyFeature() {
+  return (
+    <div>
+      <Typography>Hello</Typography>
+      <Button onClick={handleClick}>Click me</Button>
+    </div>
+  )
+}
+```
+
 ### TypeScript Configuration
 
 - `tsconfig.node.json` - Main and preload processes (Node.js environment)
