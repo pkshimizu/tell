@@ -1,4 +1,8 @@
-import { GitHubApiAccount, GitHubApiOrganization } from '@main/models/github'
+import {
+  GitHubApiAccount,
+  GitHubApiOrganization,
+  GitHubApiRepository as GitHubApiRepositoryModel
+} from '@main/models/github'
 
 interface GitHubUserResponse {
   login: string
@@ -17,6 +21,12 @@ interface GitHubOrganizationResponse {
   login: string
   html_url: string
   avatar_url: string
+  [key: string]: unknown
+}
+
+interface GitHubRepositoryResponse {
+  name: string
+  html_url: string
   [key: string]: unknown
 }
 
@@ -113,6 +123,33 @@ export class GitHubApiRepository {
       login: org.login,
       htmlUrl: org.html_url,
       avatarUrl: org.avatar_url
+    }))
+  }
+
+  async getRepositories(
+    personalAccessToken: string,
+    organizationLogin: string
+  ): Promise<GitHubApiRepositoryModel[]> {
+    const response = await fetch(`${this.baseUrl}/orgs/${organizationLogin}/repos`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch GitHub repositories: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubRepositoryResponse[]
+
+    return data.map((repo) => ({
+      name: repo.name,
+      htmlUrl: repo.html_url
     }))
   }
 }

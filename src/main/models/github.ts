@@ -10,3 +10,8 @@ export interface GitHubApiOrganization {
   htmlUrl: string
   avatarUrl: string
 }
+
+export interface GitHubApiRepository {
+  name: string
+  htmlUrl: string
+}
