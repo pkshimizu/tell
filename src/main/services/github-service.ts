@@ -76,8 +76,14 @@ export class GitHubService {
       throw new Error(`GitHub account with id '${accountId}' not found`)
     }
 
-    // GitHub APIからリポジトリ一覧を取得
-    return await githubApiRepository.getRepositories(account.personalAccessToken, ownerLogin)
+    // アカウント自身のリポジトリか、Organizationのリポジトリかを判定
+    if (ownerLogin === account.login) {
+      // アカウント自身のリポジトリを取得
+      return await githubApiRepository.getUserRepositories(account.personalAccessToken)
+    } else {
+      // Organizationのリポジトリを取得
+      return await githubApiRepository.getRepositories(account.personalAccessToken, ownerLogin)
+    }
   }
 }
 

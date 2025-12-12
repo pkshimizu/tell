@@ -102,7 +102,7 @@ export class GitHubApiRepository {
   }
 
   async getOwners(personalAccessToken: string): Promise<GitHubApiOwner[]> {
-    const response = await fetch(`${this.baseUrl}/user/orgs`, {
+    const response = await fetch(`${this.baseUrl}/user/orgs?per_page=100`, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
@@ -126,11 +126,35 @@ export class GitHubApiRepository {
     }))
   }
 
+  async getUserRepositories(personalAccessToken: string): Promise<GitHubApiRepositoryModel[]> {
+    const response = await fetch(`${this.baseUrl}/user/repos?affiliation=owner&per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch user repositories: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubRepositoryResponse[]
+
+    return data.map((repo) => ({
+      name: repo.name,
+      htmlUrl: repo.html_url
+    }))
+  }
+
   async getRepositories(
     personalAccessToken: string,
     ownerLogin: string
   ): Promise<GitHubApiRepositoryModel[]> {
-    const response = await fetch(`${this.baseUrl}/orgs/${ownerLogin}/repos`, {
+    const response = await fetch(`${this.baseUrl}/orgs/${ownerLogin}/repos?per_page=100`, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
