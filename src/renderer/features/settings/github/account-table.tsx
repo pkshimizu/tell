@@ -12,6 +12,7 @@ import GitHubRepositorySelectDialog from './repository-select-dialog'
 export default function GitHubAccountTable() {
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
   const text = useText()
 
   useEffect(() => {
@@ -23,12 +24,14 @@ export default function GitHubAccountTable() {
     })()
   }, [])
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (accountId: number) => {
+    setSelectedAccountId(accountId)
     setDialogOpen(true)
   }
 
   const handleCloseDialog = () => {
     setDialogOpen(false)
+    setSelectedAccountId(null)
   }
 
   return (
@@ -56,11 +59,15 @@ export default function GitHubAccountTable() {
               <TText>Expires date</TText>
               <TText>{text.formatDateTime(account.expiredAt) ?? 'No expires'}</TText>
             </TColumn>
-            <TButton onClick={handleOpenDialog}>Repositories</TButton>
+            <TButton onClick={() => handleOpenDialog(account.id)}>Repositories</TButton>
           </TGrid>
         ))}
       </TColumn>
-      <GitHubRepositorySelectDialog open={dialogOpen} onClose={handleCloseDialog} />
+      <GitHubRepositorySelectDialog
+        open={dialogOpen}
+        accountId={selectedAccountId}
+        onClose={handleCloseDialog}
+      />
     </>
   )
 }
