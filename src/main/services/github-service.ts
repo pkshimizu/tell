@@ -1,6 +1,7 @@
 import { githubApiRepository } from '@main/repositories/github/api-repository'
 import { githubAccountRepository } from '@main/repositories/github/account-repository'
 import type { GithubAccount } from '@main/database/schemas'
+import type { GitHubApiOrganization, GitHubApiRepository } from '@main/models/github'
 
 /**
  * GitHubアカウント管理サービス
@@ -36,6 +37,44 @@ export class GitHubService {
       personalAccessToken,
       expiredAt
     })
+  }
+
+  /**
+   * GitHubアカウントIDから組織一覧を取得する
+   * @param accountId - GitHubアカウントID
+   * @returns 組織一覧
+   * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
+   */
+  async getOrganizations(accountId: number): Promise<GitHubApiOrganization[]> {
+    // DBからアカウント情報を取得
+    const account = await githubAccountRepository.findById(accountId)
+    if (!account) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // GitHub APIから組織一覧を取得
+    return await githubApiRepository.getOrganizations(account.personalAccessToken)
+  }
+
+  /**
+   * GitHubアカウントIDと組織名からリポジトリ一覧を取得する
+   * @param accountId - GitHubアカウントID
+   * @param organizationLogin - 組織名
+   * @returns リポジトリ一覧
+   * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
+   */
+  async getRepositories(
+    accountId: number,
+    organizationLogin: string
+  ): Promise<GitHubApiRepository[]> {
+    // DBからアカウント情報を取得
+    const account = await githubAccountRepository.findById(accountId)
+    if (!account) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // GitHub APIからリポジトリ一覧を取得
+    return await githubApiRepository.getRepositories(account.personalAccessToken, organizationLogin)
   }
 }
 

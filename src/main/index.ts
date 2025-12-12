@@ -77,6 +77,31 @@ app.whenReady().then(() => {
       }
     }
   })
+  ipcMain.handle('github:getOrganizations', async (_, accountId: number) => {
+    try {
+      const organizations = await githubService.getOrganizations(accountId)
+      return { success: true, data: organizations }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
+  ipcMain.handle(
+    'github:getRepositories',
+    async (_, accountId: number, organizationLogin: string) => {
+      try {
+        const repositories = await githubService.getRepositories(accountId, organizationLogin)
+        return { success: true, data: repositories }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    }
+  )
 
   createWindow()
 
