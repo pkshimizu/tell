@@ -6,7 +6,10 @@ const api = {
   github: {
     createAccount: (personalAccessToken: string) =>
       ipcRenderer.invoke('github:createAccount', personalAccessToken),
-    getAccounts: () => ipcRenderer.invoke('github:getAccounts')
+    getAccounts: () => ipcRenderer.invoke('github:getAccounts'),
+    getOwners: (accountId: number) => ipcRenderer.invoke('github:getOwners', accountId),
+    getRepositories: (accountId: number, organizationLogin: string) =>
+      ipcRenderer.invoke('github:getRepositories', accountId, organizationLogin)
   }
 }
 

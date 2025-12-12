@@ -1,4 +1,8 @@
-import { GitHubApiAccount } from '@main/models/github'
+import {
+  GitHubApiAccount,
+  GitHubApiOwner,
+  GitHubApiRepository as GitHubApiRepositoryModel
+} from '@main/models/github'
 
 interface GitHubUserResponse {
   login: string
@@ -10,6 +14,19 @@ interface GitHubUserResponse {
 
 interface GitHubTokenResponse {
   expires_at?: string | null
+  [key: string]: unknown
+}
+
+interface GitHubOrganizationResponse {
+  login: string
+  html_url: string
+  avatar_url: string
+  [key: string]: unknown
+}
+
+interface GitHubRepositoryResponse {
+  name: string
+  html_url: string
   [key: string]: unknown
 }
 
@@ -82,6 +99,82 @@ export class GitHubApiRepository {
       console.warn('Failed to fetch token expiration:', error)
       return null
     }
+  }
+
+  async getOwners(personalAccessToken: string): Promise<GitHubApiOwner[]> {
+    const response = await fetch(`${this.baseUrl}/user/orgs?per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch GitHub owners: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubOrganizationResponse[]
+
+    return data.map((org) => ({
+      login: org.login,
+      htmlUrl: org.html_url,
+      avatarUrl: org.avatar_url
+    }))
+  }
+
+  async getUserRepositories(personalAccessToken: string): Promise<GitHubApiRepositoryModel[]> {
+    const response = await fetch(`${this.baseUrl}/user/repos?affiliation=owner&per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch user repositories: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubRepositoryResponse[]
+
+    return data.map((repo) => ({
+      name: repo.name,
+      htmlUrl: repo.html_url
+    }))
+  }
+
+  async getRepositories(
+    personalAccessToken: string,
+    ownerLogin: string
+  ): Promise<GitHubApiRepositoryModel[]> {
+    const response = await fetch(`${this.baseUrl}/orgs/${ownerLogin}/repos?per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Failed to fetch GitHub repositories: ${response.status} ${response.statusText} - ${errorBody}`
+      )
+    }
+
+    const data = (await response.json()) as GitHubRepositoryResponse[]
+
+    return data.map((repo) => ({
+      name: repo.name,
+      htmlUrl: repo.html_url
+    }))
   }
 }
 

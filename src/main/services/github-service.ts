@@ -1,6 +1,7 @@
 import { githubApiRepository } from '@main/repositories/github/api-repository'
 import { githubAccountRepository } from '@main/repositories/github/account-repository'
 import type { GithubAccount } from '@main/database/schemas'
+import type { GitHubApiOwner, GitHubApiRepository } from '@main/models/github'
 
 /**
  * GitHubアカウント管理サービス
@@ -36,6 +37,53 @@ export class GitHubService {
       personalAccessToken,
       expiredAt
     })
+  }
+
+  /**
+   * GitHubアカウントIDからオーナー一覧を取得する
+   * @param accountId - GitHubアカウントID
+   * @returns オーナー一覧
+   * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
+   */
+  async getOwners(accountId: number): Promise<GitHubApiOwner[]> {
+    // DBからアカウント情報を取得
+    const account = await githubAccountRepository.findById(accountId)
+    if (!account) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // GitHub APIから組織一覧を取得
+    const owners = await githubApiRepository.getOwners(account.personalAccessToken)
+    const accountOwner: GitHubApiOwner = {
+      login: account.login,
+      htmlUrl: account.htmlUrl,
+      avatarUrl: account.avatarUrl
+    }
+    return [accountOwner, ...owners]
+  }
+
+  /**
+   * GitHubアカウントIDとオーナー名からリポジトリ一覧を取得する
+   * @param accountId - GitHubアカウントID
+   * @param ownerLogin - オーナー名
+   * @returns リポジトリ一覧
+   * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
+   */
+  async getRepositories(accountId: number, ownerLogin: string): Promise<GitHubApiRepository[]> {
+    // DBからアカウント情報を取得
+    const account = await githubAccountRepository.findById(accountId)
+    if (!account) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // アカウント自身のリポジトリか、Organizationのリポジトリかを判定
+    if (ownerLogin === account.login) {
+      // アカウント自身のリポジトリを取得
+      return await githubApiRepository.getUserRepositories(account.personalAccessToken)
+    } else {
+      // Organizationのリポジトリを取得
+      return await githubApiRepository.getRepositories(account.personalAccessToken, ownerLogin)
+    }
   }
 }
 
