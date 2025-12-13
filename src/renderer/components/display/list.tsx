@@ -14,6 +14,7 @@ interface Item {
 
 interface Props {
   items: Item[]
+  height?: number | string
 }
 
 function TListItem(props: { item: Item }) {
@@ -49,7 +50,7 @@ function TListItem(props: { item: Item }) {
 
 export default function TList(props: Props) {
   return (
-    <List sx={{ padding: 0 }}>
+    <List sx={{ padding: 0, height: props.height, overflowY: 'auto' }}>
       {props.items.map((item) => {
         if (item.hide) {
           return null
