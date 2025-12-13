@@ -29,7 +29,7 @@ interface GitHubAPI {
     data?: GitHubApiRepositoryModel[]
     error?: string
   }>
-  selectRepository: (
+  addRepository: (
     accountId: number,
     ownerLogin: string,
     ownerHtmlUrl: string,
@@ -41,7 +41,7 @@ interface GitHubAPI {
     data?: GithubRepository
     error?: string
   }>
-  getSelectedRepositories: (
+  getRegisteredRepositories: (
     accountId: number,
     ownerLogin: string
   ) => Promise<{
@@ -49,7 +49,7 @@ interface GitHubAPI {
     data?: GithubRepository[]
     error?: string
   }>
-  unselectRepository: (
+  removeRepository: (
     accountId: number,
     ownerLogin: string,
     repositoryName: string

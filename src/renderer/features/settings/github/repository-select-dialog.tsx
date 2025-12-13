@@ -37,7 +37,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([])
-  const [selectedRepositories, setSelectedRepositories] = useState<Set<string>>(new Set())
+  const [registeredRepositories, setRegisteredRepositories] = useState<Set<string>>(new Set())
 
   const { register, control, watch } = useForm<FormValues>({
     defaultValues: {
@@ -49,46 +49,46 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   const selectedOwner = watch('owner')
   const filterKeyword = watch('filterKeyword')
 
-  const loadSelectedRepositories = useCallback(async () => {
+  const loadRegisteredRepositories = useCallback(async () => {
     if (!props.accountId || !selectedOwner) return
 
-    const result = await window.api.github.getSelectedRepositories(props.accountId, selectedOwner)
+    const result = await window.api.github.getRegisteredRepositories(props.accountId, selectedOwner)
     if (result.success && result.data) {
-      setSelectedRepositories(new Set(result.data.map((repo) => repo.name)))
+      setRegisteredRepositories(new Set(result.data.map((repo) => repo.name)))
     }
   }, [props.accountId, selectedOwner])
 
-  const handleSelectRepository = async (repository: Repository) => {
+  const handleAddRepository = async (repository: Repository) => {
     if (!props.accountId) return
 
-    const selectedOwnerData = owners.find((o) => o.login === selectedOwner)
-    if (!selectedOwnerData) return
+    const owner = owners.find((o) => o.login === selectedOwner)
+    if (!owner) return
 
-    const result = await window.api.github.selectRepository(
+    const result = await window.api.github.addRepository(
       props.accountId,
-      selectedOwnerData.login,
-      selectedOwnerData.htmlUrl,
-      selectedOwnerData.avatarUrl,
+      owner.login,
+      owner.htmlUrl,
+      owner.avatarUrl,
       repository.name,
       repository.htmlUrl
     )
 
     if (result.success) {
-      await loadSelectedRepositories()
+      await loadRegisteredRepositories()
     }
   }
 
-  const handleUnselectRepository = async (repository: Repository) => {
+  const handleRemoveRepository = async (repository: Repository) => {
     if (!props.accountId) return
 
-    const result = await window.api.github.unselectRepository(
+    const result = await window.api.github.removeRepository(
       props.accountId,
       selectedOwner,
       repository.name
     )
 
     if (result.success) {
-      await loadSelectedRepositories()
+      await loadRegisteredRepositories()
     }
   }
 
@@ -111,14 +111,14 @@ export default function GitHubRepositorySelectDialog(props: Props) {
         if (result.success && result.data) {
           setRepositories(result.data)
         }
-        await loadSelectedRepositories()
+        await loadRegisteredRepositories()
         setLoading(false)
       })()
     } else {
       setRepositories([])
-      setSelectedRepositories(new Set())
+      setRegisteredRepositories(new Set())
     }
-  }, [selectedOwner, props.accountId, loadSelectedRepositories])
+  }, [selectedOwner, props.accountId, loadRegisteredRepositories])
 
   useEffect(() => {
     if (filterKeyword) {
@@ -154,7 +154,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
             <TTextField register={register('filterKeyword')} />
             <TList
               items={filteredRepositories.map((repo) => {
-                const isSelected = selectedRepositories.has(repo.name)
+                const isRegistered = registeredRepositories.has(repo.name)
                 return {
                   id: repo.name,
                   content: (
@@ -162,10 +162,10 @@ export default function GitHubRepositorySelectDialog(props: Props) {
                       <TText>{repo.name}</TText>
                       <TButton
                         onClick={() =>
-                          isSelected ? handleUnselectRepository(repo) : handleSelectRepository(repo)
+                          isRegistered ? handleRemoveRepository(repo) : handleAddRepository(repo)
                         }
                       >
-                        {isSelected ? 'UnSelect' : 'Select'}
+                        {isRegistered ? 'Remove' : 'Add'}
                       </TButton>
                     </TRow>
                   )

@@ -100,7 +100,7 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle(
-    'github:selectRepository',
+    'github:addRepository',
     async (
       _,
       accountId: number,
@@ -111,7 +111,7 @@ app.whenReady().then(() => {
       repositoryHtmlUrl: string
     ) => {
       try {
-        const repository = await githubService.selectRepository(
+        const repository = await githubService.addRepository(
           accountId,
           ownerLogin,
           ownerHtmlUrl,
@@ -129,10 +129,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:getSelectedRepositories',
+    'github:getRegisteredRepositories',
     async (_, accountId: number, ownerLogin: string) => {
       try {
-        const repositories = await githubService.getSelectedRepositories(accountId, ownerLogin)
+        const repositories = await githubService.getRegisteredRepositories(accountId, ownerLogin)
         return { success: true, data: repositories }
       } catch (error) {
         return {
@@ -143,10 +143,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:unselectRepository',
+    'github:removeRepository',
     async (_, accountId: number, ownerLogin: string, repositoryName: string) => {
       try {
-        await githubService.unselectRepository(accountId, ownerLogin, repositoryName)
+        await githubService.removeRepository(accountId, ownerLogin, repositoryName)
         return { success: true }
       } catch (error) {
         return {

@@ -99,7 +99,7 @@ export class GitHubService {
    * @returns 保存されたGitHubリポジトリ
    * @throws Error - アカウントが見つからない場合、またはDB操作が失敗した場合
    */
-  async selectRepository(
+  async addRepository(
     accountId: number,
     ownerLogin: string,
     ownerHtmlUrl: string,
@@ -150,7 +150,7 @@ export class GitHubService {
    * @returns 選択済みリポジトリのリスト
    * @throws Error - アカウントが見つからない場合
    */
-  async getSelectedRepositories(
+  async getRegisteredRepositories(
     accountId: number,
     ownerLogin: string
   ): Promise<GithubRepository[]> {
@@ -178,7 +178,7 @@ export class GitHubService {
    * @param repositoryName - リポジトリ名
    * @throws Error - アカウントが見つからない場合、またはDB操作が失敗した場合
    */
-  async unselectRepository(
+  async removeRepository(
     accountId: number,
     ownerLogin: string,
     repositoryName: string

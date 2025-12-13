@@ -10,7 +10,7 @@ const api = {
     getOwners: (accountId: number) => ipcRenderer.invoke('github:getOwners', accountId),
     getRepositories: (accountId: number, organizationLogin: string) =>
       ipcRenderer.invoke('github:getRepositories', accountId, organizationLogin),
-    selectRepository: (
+    addRepository: (
       accountId: number,
       ownerLogin: string,
       ownerHtmlUrl: string,
@@ -19,7 +19,7 @@ const api = {
       repositoryHtmlUrl: string
     ) =>
       ipcRenderer.invoke(
-        'github:selectRepository',
+        'github:addRepository',
         accountId,
         ownerLogin,
         ownerHtmlUrl,
@@ -27,10 +27,10 @@ const api = {
         repositoryName,
         repositoryHtmlUrl
       ),
-    getSelectedRepositories: (accountId: number, ownerLogin: string) =>
-      ipcRenderer.invoke('github:getSelectedRepositories', accountId, ownerLogin),
-    unselectRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
-      ipcRenderer.invoke('github:unselectRepository', accountId, ownerLogin, repositoryName)
+    getRegisteredRepositories: (accountId: number, ownerLogin: string) =>
+      ipcRenderer.invoke('github:getRegisteredRepositories', accountId, ownerLogin),
+    removeRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
+      ipcRenderer.invoke('github:removeRepository', accountId, ownerLogin, repositoryName)
   }
 }
 
