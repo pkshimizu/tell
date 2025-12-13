@@ -9,7 +9,28 @@ const api = {
     getAccounts: () => ipcRenderer.invoke('github:getAccounts'),
     getOwners: (accountId: number) => ipcRenderer.invoke('github:getOwners', accountId),
     getRepositories: (accountId: number, organizationLogin: string) =>
-      ipcRenderer.invoke('github:getRepositories', accountId, organizationLogin)
+      ipcRenderer.invoke('github:getRepositories', accountId, organizationLogin),
+    selectRepository: (
+      accountId: number,
+      ownerLogin: string,
+      ownerHtmlUrl: string,
+      ownerAvatarUrl: string | null,
+      repositoryName: string,
+      repositoryHtmlUrl: string
+    ) =>
+      ipcRenderer.invoke(
+        'github:selectRepository',
+        accountId,
+        ownerLogin,
+        ownerHtmlUrl,
+        ownerAvatarUrl,
+        repositoryName,
+        repositoryHtmlUrl
+      ),
+    getSelectedRepositories: (accountId: number, ownerLogin: string) =>
+      ipcRenderer.invoke('github:getSelectedRepositories', accountId, ownerLogin),
+    unselectRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
+      ipcRenderer.invoke('github:unselectRepository', accountId, ownerLogin, repositoryName)
   }
 }
 

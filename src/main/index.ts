@@ -99,6 +99,63 @@ app.whenReady().then(() => {
       }
     }
   })
+  ipcMain.handle(
+    'github:selectRepository',
+    async (
+      _,
+      accountId: number,
+      ownerLogin: string,
+      ownerHtmlUrl: string,
+      ownerAvatarUrl: string | null,
+      repositoryName: string,
+      repositoryHtmlUrl: string
+    ) => {
+      try {
+        const repository = await githubService.selectRepository(
+          accountId,
+          ownerLogin,
+          ownerHtmlUrl,
+          ownerAvatarUrl,
+          repositoryName,
+          repositoryHtmlUrl
+        )
+        return { success: true, data: repository }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    }
+  )
+  ipcMain.handle(
+    'github:getSelectedRepositories',
+    async (_, accountId: number, ownerLogin: string) => {
+      try {
+        const repositories = await githubService.getSelectedRepositories(accountId, ownerLogin)
+        return { success: true, data: repositories }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    }
+  )
+  ipcMain.handle(
+    'github:unselectRepository',
+    async (_, accountId: number, ownerLogin: string, repositoryName: string) => {
+      try {
+        await githubService.unselectRepository(accountId, ownerLogin, repositoryName)
+        return { success: true }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    }
+  )
 
   createWindow()
 

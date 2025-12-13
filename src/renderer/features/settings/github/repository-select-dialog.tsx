@@ -1,5 +1,5 @@
 import TDialog from '@renderer/components/feedback/dialog'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import TSelect from '@renderer/components/form/select'
 import TList from '@renderer/components/display/list'
 import { TColumn, TRow } from '@renderer/components/layout/flex-box'
@@ -37,6 +37,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([])
+  const [selectedRepositories, setSelectedRepositories] = useState<Set<string>>(new Set())
 
   const { register, control, watch } = useForm<FormValues>({
     defaultValues: {
@@ -47,6 +48,49 @@ export default function GitHubRepositorySelectDialog(props: Props) {
 
   const selectedOwner = watch('owner')
   const filterKeyword = watch('filterKeyword')
+
+  const loadSelectedRepositories = useCallback(async () => {
+    if (!props.accountId || !selectedOwner) return
+
+    const result = await window.api.github.getSelectedRepositories(props.accountId, selectedOwner)
+    if (result.success && result.data) {
+      setSelectedRepositories(new Set(result.data.map((repo) => repo.name)))
+    }
+  }, [props.accountId, selectedOwner])
+
+  const handleSelectRepository = async (repository: Repository) => {
+    if (!props.accountId) return
+
+    const selectedOwnerData = owners.find((o) => o.login === selectedOwner)
+    if (!selectedOwnerData) return
+
+    const result = await window.api.github.selectRepository(
+      props.accountId,
+      selectedOwnerData.login,
+      selectedOwnerData.htmlUrl,
+      selectedOwnerData.avatarUrl,
+      repository.name,
+      repository.htmlUrl
+    )
+
+    if (result.success) {
+      await loadSelectedRepositories()
+    }
+  }
+
+  const handleUnselectRepository = async (repository: Repository) => {
+    if (!props.accountId) return
+
+    const result = await window.api.github.unselectRepository(
+      props.accountId,
+      selectedOwner,
+      repository.name
+    )
+
+    if (result.success) {
+      await loadSelectedRepositories()
+    }
+  }
 
   useEffect(() => {
     if (props.open && props.accountId) {
@@ -67,12 +111,14 @@ export default function GitHubRepositorySelectDialog(props: Props) {
         if (result.success && result.data) {
           setRepositories(result.data)
         }
+        await loadSelectedRepositories()
         setLoading(false)
       })()
     } else {
       setRepositories([])
+      setSelectedRepositories(new Set())
     }
-  }, [selectedOwner, props.accountId])
+  }, [selectedOwner, props.accountId, loadSelectedRepositories])
 
   useEffect(() => {
     if (filterKeyword) {
@@ -107,15 +153,24 @@ export default function GitHubRepositorySelectDialog(props: Props) {
             <TText variant="caption">Repositories</TText>
             <TTextField register={register('filterKeyword')} />
             <TList
-              items={filteredRepositories.map((repo) => ({
-                id: repo.name,
-                content: (
-                  <TRow justify={'space-between'} align={'center'}>
-                    <TText>{repo.name}</TText>
-                    <TButton>Select</TButton>
-                  </TRow>
-                )
-              }))}
+              items={filteredRepositories.map((repo) => {
+                const isSelected = selectedRepositories.has(repo.name)
+                return {
+                  id: repo.name,
+                  content: (
+                    <TRow justify={'space-between'} align={'center'}>
+                      <TText>{repo.name}</TText>
+                      <TButton
+                        onClick={() =>
+                          isSelected ? handleUnselectRepository(repo) : handleSelectRepository(repo)
+                        }
+                      >
+                        {isSelected ? 'UnSelect' : 'Select'}
+                      </TButton>
+                    </TRow>
+                  )
+                }
+              })}
               height={460}
             />
           </TColumn>
