@@ -50,7 +50,7 @@ function TListItem(props: { item: Item }) {
 
 export default function TList(props: Props) {
   return (
-    <List sx={{ padding: 0, height: props.height, overflowY: 'auto' }}>
+    <List sx={{ padding: 0, height: props.height, overflowY: props.height ? 'auto' : undefined }}>
       {props.items.map((item) => {
         if (item.hide) {
           return null
