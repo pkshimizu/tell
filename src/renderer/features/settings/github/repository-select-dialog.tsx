@@ -1,12 +1,14 @@
 import TDialog from '@renderer/components/feedback/dialog'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import TSelect from '@renderer/components/form/select'
 import TList from '@renderer/components/display/list'
-import { TColumn } from '@renderer/components/layout/flex-box'
+import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TText from '@renderer/components/display/text'
 import TCircularProgress from '@renderer/components/feedback/circular-progress'
 import { useForm } from 'react-hook-form'
 import TFormItem from '@renderer/components/form/form-item'
+import TTextField from '@renderer/components/form/text-field'
+import TButton from '@renderer/components/form/button'
 
 interface Props {
   open: boolean
@@ -26,21 +28,69 @@ interface Repository {
 }
 
 interface FormValues {
-  organization: string
+  owner: string
+  filterKeyword: string
 }
 
 export default function GitHubRepositorySelectDialog(props: Props) {
   const [owners, setOwners] = useState<Owner[]>([])
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
+  const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([])
+  const [registeredRepositories, setRegisteredRepositories] = useState<Set<string>>(new Set())
 
-  const { control, watch } = useForm<FormValues>({
+  const { register, control, watch } = useForm<FormValues>({
     defaultValues: {
-      organization: ''
+      owner: '',
+      filterKeyword: ''
     }
   })
 
-  const selectedOrg = watch('organization')
+  const selectedOwner = watch('owner')
+  const filterKeyword = watch('filterKeyword')
+
+  const loadRegisteredRepositories = useCallback(async () => {
+    if (!props.accountId || !selectedOwner) return
+
+    const result = await window.api.github.getRegisteredRepositories(props.accountId, selectedOwner)
+    if (result.success && result.data) {
+      setRegisteredRepositories(new Set(result.data.map((repo) => repo.name)))
+    }
+  }, [props.accountId, selectedOwner])
+
+  const handleAddRepository = async (repository: Repository) => {
+    if (!props.accountId) return
+
+    const owner = owners.find((o) => o.login === selectedOwner)
+    if (!owner) return
+
+    const result = await window.api.github.addRepository(
+      props.accountId,
+      owner.login,
+      owner.htmlUrl,
+      owner.avatarUrl,
+      repository.name,
+      repository.htmlUrl
+    )
+
+    if (result.success) {
+      await loadRegisteredRepositories()
+    }
+  }
+
+  const handleRemoveRepository = async (repository: Repository) => {
+    if (!props.accountId) return
+
+    const result = await window.api.github.removeRepository(
+      props.accountId,
+      selectedOwner,
+      repository.name
+    )
+
+    if (result.success) {
+      await loadRegisteredRepositories()
+    }
+  }
 
   useEffect(() => {
     if (props.open && props.accountId) {
@@ -54,30 +104,44 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   }, [props.open, props.accountId])
 
   useEffect(() => {
-    if (selectedOrg && props.accountId) {
+    if (selectedOwner && props.accountId) {
       setLoading(true)
       ;(async () => {
-        const result = await window.api.github.getRepositories(props.accountId!, selectedOrg)
+        const result = await window.api.github.getRepositories(props.accountId!, selectedOwner)
         if (result.success && result.data) {
           setRepositories(result.data)
         }
+        await loadRegisteredRepositories()
         setLoading(false)
       })()
     } else {
       setRepositories([])
+      setRegisteredRepositories(new Set())
     }
-  }, [selectedOrg, props.accountId])
+  }, [selectedOwner, props.accountId, loadRegisteredRepositories])
+
+  useEffect(() => {
+    if (filterKeyword) {
+      setFilteredRepositories(
+        repositories.filter((repository) =>
+          repository.name.toLowerCase().includes(filterKeyword.trim())
+        )
+      )
+    } else {
+      setFilteredRepositories(repositories)
+    }
+  }, [filterKeyword, repositories])
 
   return (
     <TDialog open={props.open} onClose={props.onClose} title="Select Repository" size="md">
-      <TColumn gap={2}>
+      <TColumn gap={2} height={600}>
         <TFormItem label="Organization">
           <TSelect
             control={control}
-            name="organization"
-            items={owners.map((org) => ({
-              value: org.login,
-              label: org.login
+            name="owner"
+            items={owners.map((owner) => ({
+              value: owner.login,
+              label: owner.login
             }))}
           />
         </TFormItem>
@@ -87,14 +151,27 @@ export default function GitHubRepositorySelectDialog(props: Props) {
         {!loading && repositories.length > 0 && (
           <TColumn gap={1}>
             <TText variant="caption">Repositories</TText>
+            <TTextField register={register('filterKeyword')} />
             <TList
-              items={repositories.map((repo) => ({
-                id: repo.name,
-                text: repo.name,
-                onClick: () => {
-                  window.open(repo.htmlUrl, '_blank')
+              items={filteredRepositories.map((repo) => {
+                const isRegistered = registeredRepositories.has(repo.name)
+                return {
+                  id: repo.name,
+                  content: (
+                    <TRow justify={'space-between'} align={'center'}>
+                      <TText>{repo.name}</TText>
+                      <TButton
+                        onClick={() =>
+                          isRegistered ? handleRemoveRepository(repo) : handleAddRepository(repo)
+                        }
+                      >
+                        {isRegistered ? 'Remove' : 'Add'}
+                      </TButton>
+                    </TRow>
+                  )
                 }
-              }))}
+              })}
+              height={460}
             />
           </TColumn>
         )}

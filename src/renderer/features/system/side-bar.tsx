@@ -13,14 +13,14 @@ export default function SideBar() {
         items={[
           {
             id: 'home',
-            text: 'Home',
+            content: 'Home',
             icon: <HomeIcon />,
             selected: matchRoute({ to: '/', fuzzy: true }) as boolean,
             href: '/'
           },
           {
             id: 'setting',
-            text: 'Settings',
+            content: 'Settings',
             icon: <SettingsIcon />,
             selected: matchRoute({ to: '/settings', fuzzy: true }) as boolean,
             href: '/settings'

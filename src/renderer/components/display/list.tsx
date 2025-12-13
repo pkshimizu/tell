@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 
 interface Item {
   id: string
-  text: string
+  content: ReactNode
   icon?: ReactNode
   selected?: boolean
   hide?: boolean
@@ -14,6 +14,7 @@ interface Item {
 
 interface Props {
   items: Item[]
+  height?: number | string
 }
 
 function TListItem(props: { item: Item }) {
@@ -24,7 +25,7 @@ function TListItem(props: { item: Item }) {
       <ListItem disablePadding>
         <ListItemButton onClick={item.onClick} selected={!!item.selected}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.text} />
+          <ListItemText primary={item.content} />
         </ListItemButton>
       </ListItem>
     )
@@ -34,7 +35,7 @@ function TListItem(props: { item: Item }) {
       <ListItem disablePadding>
         <ListItemButton to={item.href} selected={!!item.selected} component={Link}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.text} />
+          <ListItemText primary={item.content} />
         </ListItemButton>
       </ListItem>
     )
@@ -42,14 +43,14 @@ function TListItem(props: { item: Item }) {
   return (
     <ListItem>
       {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-      <ListItemText primary={item.text} />
+      <ListItemText primary={item.content} />
     </ListItem>
   )
 }
 
 export default function TList(props: Props) {
   return (
-    <List sx={{ padding: 0 }}>
+    <List sx={{ padding: 0, height: props.height, overflowY: props.height ? 'auto' : undefined }}>
       {props.items.map((item) => {
         if (item.hide) {
           return null

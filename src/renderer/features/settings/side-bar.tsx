@@ -11,14 +11,14 @@ export default function SettingsSideBar() {
       items={[
         {
           id: 'general',
-          text: 'General',
+          content: 'General',
           icon: <SettingsIcon />,
           selected: matchRoute({ to: '/settings', fuzzy: false }) as boolean,
           href: '/settings'
         },
         {
           id: 'github',
-          text: 'GitHub',
+          content: 'GitHub',
           icon: <GitHubIcon />,
           selected: matchRoute({ to: '/settings/github', fuzzy: true }) as boolean,
           href: '/settings/github'
