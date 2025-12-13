@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 
 interface Item {
   id: string
-  text: string
+  content: ReactNode
   icon?: ReactNode
   selected?: boolean
   hide?: boolean
@@ -25,7 +25,7 @@ function TListItem(props: { item: Item }) {
       <ListItem disablePadding>
         <ListItemButton onClick={item.onClick} selected={!!item.selected}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.text} />
+          <ListItemText primary={item.content} />
         </ListItemButton>
       </ListItem>
     )
@@ -35,7 +35,7 @@ function TListItem(props: { item: Item }) {
       <ListItem disablePadding>
         <ListItemButton to={item.href} selected={!!item.selected} component={Link}>
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.text} />
+          <ListItemText primary={item.content} />
         </ListItemButton>
       </ListItem>
     )
@@ -43,7 +43,7 @@ function TListItem(props: { item: Item }) {
   return (
     <ListItem>
       {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-      <ListItemText primary={item.text} />
+      <ListItemText primary={item.content} />
     </ListItem>
   )
 }

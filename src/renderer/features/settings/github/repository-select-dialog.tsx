@@ -2,12 +2,13 @@ import TDialog from '@renderer/components/feedback/dialog'
 import { useEffect, useState } from 'react'
 import TSelect from '@renderer/components/form/select'
 import TList from '@renderer/components/display/list'
-import { TColumn } from '@renderer/components/layout/flex-box'
+import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TText from '@renderer/components/display/text'
 import TCircularProgress from '@renderer/components/feedback/circular-progress'
 import { useForm } from 'react-hook-form'
 import TFormItem from '@renderer/components/form/form-item'
 import TTextField from '@renderer/components/form/text-field'
+import TButton from '@renderer/components/form/button'
 
 interface Props {
   open: boolean
@@ -108,10 +109,12 @@ export default function GitHubRepositorySelectDialog(props: Props) {
             <TList
               items={filteredRepositories.map((repo) => ({
                 id: repo.name,
-                text: repo.name,
-                onClick: () => {
-                  window.open(repo.htmlUrl, '_blank')
-                }
+                content: (
+                  <TRow justify={'space-between'} align={'center'}>
+                    <TText>{repo.name}</TText>
+                    <TButton>Select</TButton>
+                  </TRow>
+                )
               }))}
               height={460}
             />
