@@ -1,7 +1,11 @@
 import {
   GitHubApiAccount,
   GitHubApiOwner,
-  GitHubApiRepository as GitHubApiRepositoryModel
+  GitHubApiRepository as GitHubApiRepositoryModel,
+  GitHubApiPullRequest,
+  GitHubApiPullRequestAssignee,
+  GitHubApiPullRequestReviewer,
+  GitHubPullRequestState
 } from '@main/models/github'
 
 interface GitHubUserResponse {
@@ -27,6 +31,38 @@ interface GitHubOrganizationResponse {
 interface GitHubRepositoryResponse {
   name: string
   html_url: string
+  [key: string]: unknown
+}
+
+interface GitHubPullRequestResponse {
+  id: number
+  number: number
+  title: string
+  html_url: string
+  created_at: string
+  updated_at: string
+  user: GitHubUserResponse
+  assignees: GitHubUserResponse[]
+  reviewers: GitHubUserResponse[]
+  base: {
+    repo: {
+      name: string
+      html_url: string
+      owner: {
+        login: string
+        html_url: string
+        avatar_url: string
+      }
+    }
+  }
+  [key: string]: unknown
+}
+
+interface GitHubReviewResponse {
+  id: number
+  user: GitHubUserResponse
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'PENDING' | 'DISMISSED'
+  body: string | null
   [key: string]: unknown
 }
 
@@ -175,6 +211,130 @@ export class GitHubApiRepository {
       name: repo.name,
       htmlUrl: repo.html_url
     }))
+  }
+
+  async getPullRequests(
+    personalAccessToken: string,
+    ownerLogin: string,
+    repositoryName: string,
+    state: GitHubPullRequestState
+  ): Promise<GitHubApiPullRequest[]> {
+    // PR一覧を取得
+    const pullsResponse = await fetch(
+      `${this.baseUrl}/repos/${ownerLogin}/${repositoryName}/pulls?state=${state}&per_page=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${personalAccessToken}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      }
+    )
+
+    if (!pullsResponse.ok) {
+      const errorBody = await pullsResponse.text()
+      throw new Error(
+        `Failed to fetch pull requests: ${pullsResponse.status} ${pullsResponse.statusText} - ${errorBody}`
+      )
+    }
+
+    const pulls = (await pullsResponse.json()) as GitHubPullRequestResponse[]
+
+    // 各PRのレビュー情報を取得
+    const pullRequestsWithReviews = await Promise.all(
+      pulls.map(async (pull) => {
+        const reviewsResponse = await fetch(
+          `${this.baseUrl}/repos/${ownerLogin}/${repositoryName}/pulls/${pull.number}/reviews`,
+          {
+            headers: {
+              Authorization: `Bearer ${personalAccessToken}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
+          }
+        )
+
+        let reviews: GitHubReviewResponse[] = []
+        if (reviewsResponse.ok) {
+          reviews = (await reviewsResponse.json()) as GitHubReviewResponse[]
+        }
+
+        // アサイニー情報を変換
+        const assignees: GitHubApiPullRequestAssignee[] = pull.assignees.map((assignee) => ({
+          name: assignee.login,
+          avatarUrl: assignee.avatar_url
+        }))
+
+        // レビュワー情報を集約
+        const reviewerMap = new Map<string, GitHubApiPullRequestReviewer>()
+
+        // リクエストされたレビュワーを追加（まだレビューしていない）
+        pull.reviewers.forEach((reviewer) => {
+          reviewerMap.set(reviewer.login, {
+            name: reviewer.login,
+            htmlUrl: reviewer.html_url,
+            avatarUrl: reviewer.avatar_url,
+            comments: 0,
+            status: 'no-review'
+          })
+        })
+
+        // 実際のレビューを処理
+        reviews.forEach((review) => {
+          const reviewerLogin = review.user.login
+          const existing = reviewerMap.get(reviewerLogin)
+
+          // コメント数をカウント（bodyがある場合）
+          const commentCount = review.body ? 1 : 0
+
+          if (existing) {
+            // 既存のレビュワーを更新
+            existing.comments += commentCount
+            // ステータスを更新（APPROVEDが最優先）
+            if (review.state === 'APPROVED') {
+              existing.status = 'approved'
+            } else if (existing.status !== 'approved' && review.state === 'COMMENTED') {
+              existing.status = 'commented'
+            }
+          } else {
+            // 新しいレビュワーを追加
+            reviewerMap.set(reviewerLogin, {
+              name: reviewerLogin,
+              htmlUrl: review.user.html_url,
+              avatarUrl: review.user.avatar_url,
+              comments: commentCount,
+              status: review.state === 'APPROVED' ? 'approved' : 'commented'
+            })
+          }
+        })
+
+        const reviewers = Array.from(reviewerMap.values())
+
+        // GitHubApiPullRequestオブジェクトを作成
+        const pullRequest: GitHubApiPullRequest = {
+          id: pull.id.toString(),
+          owner: {
+            login: pull.base.repo.owner.login,
+            htmlUrl: pull.base.repo.owner.html_url,
+            avatarUrl: pull.base.repo.owner.avatar_url
+          },
+          repository: {
+            name: pull.base.repo.name,
+            htmlUrl: pull.base.repo.html_url
+          },
+          assignees,
+          reviewers,
+          title: pull.title,
+          htmlUrl: pull.html_url,
+          createdAt: pull.created_at,
+          updatedAt: pull.updated_at
+        }
+
+        return pullRequest
+      })
+    )
+
+    return pullRequestsWithReviews
   }
 }
 

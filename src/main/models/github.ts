@@ -15,3 +15,30 @@ export interface GitHubApiRepository {
   name: string
   htmlUrl: string
 }
+
+export interface GitHubApiPullRequestAssignee {
+  name: string
+  avatarUrl: string
+}
+
+export interface GitHubApiPullRequestReviewer {
+  name: string
+  htmlUrl: string
+  avatarUrl: string
+  comments: number
+  status: 'approved' | 'commented' | 'no-review'
+}
+
+export type GitHubPullRequestState = 'open' | 'closed'
+
+export interface GitHubApiPullRequest {
+  id: string
+  owner: GitHubApiOwner
+  repository: GitHubApiRepository
+  assignees: GitHubApiPullRequestAssignee[]
+  reviewers: GitHubApiPullRequestReviewer[]
+  title: string
+  htmlUrl: string
+  createdAt: string
+  updatedAt: string
+}
