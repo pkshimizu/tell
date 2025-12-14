@@ -134,7 +134,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
 
   return (
     <TDialog open={props.open} onClose={props.onClose} title="Select Repository" size="md">
-      <TColumn gap={2} height={600}>
+      <TColumn gap={2} height={480}>
         <TFormItem label="Organization">
           <TSelect
             control={control}
