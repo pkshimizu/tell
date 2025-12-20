@@ -43,7 +43,7 @@ interface GitHubPullRequestResponse {
   updated_at: string
   user: GitHubUserResponse
   assignees: GitHubUserResponse[]
-  reviewers: GitHubUserResponse[]
+  requested_reviewers: GitHubUserResponse[]
   base: {
     repo: {
       name: string
@@ -157,7 +157,7 @@ export class GitHubApiRepository {
 
     return data.map((org) => ({
       login: org.login,
-      htmlUrl: org.html_url,
+      htmlUrl: `https://github.com/${org.login}`,
       avatarUrl: org.avatar_url
     }))
   }
@@ -269,7 +269,7 @@ export class GitHubApiRepository {
         const reviewerMap = new Map<string, GitHubApiPullRequestReviewer>()
 
         // リクエストされたレビュワーを追加（まだレビューしていない）
-        pull.reviewers.forEach((reviewer) => {
+        pull.requested_reviewers.forEach((reviewer) => {
           reviewerMap.set(reviewer.login, {
             name: reviewer.login,
             htmlUrl: reviewer.html_url,
