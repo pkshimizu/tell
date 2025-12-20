@@ -11,7 +11,14 @@ export default function GitHubPullRequestView() {
   return (
     <TGrid columns={['1fr', '160px', '240px']}>
       <TGridItem align={'center'}>
-        <TText>Pull request title</TText>
+        <TColumn>
+          <TText>Pull request title</TText>
+          <TRow gap={1}>
+            <TText variant={'caption'}>1 days ago created</TText>
+            <TText variant={'caption'}>/</TText>
+            <TText variant={'caption'}>1 days ago updated</TText>
+          </TRow>
+        </TColumn>
       </TGridItem>
       <TColumn>
         <TText variant={'caption'}>Assignees</TText>
