@@ -3,7 +3,12 @@ import { githubAccountRepository } from '@main/repositories/github/account-repos
 import { githubOwnerRepository } from '@main/repositories/github/owner-repository'
 import { githubRepositoryRepository } from '@main/repositories/github/repository-repository'
 import type { GithubAccount, GithubRepository } from '@main/database/schemas'
-import type { GitHubApiOwner, GitHubApiRepository } from '@main/models/github'
+import type {
+  GitHubApiOwner,
+  GitHubApiPullRequest,
+  GitHubApiRepository,
+  GitHubPullRequestState
+} from '@main/models/github'
 
 /**
  * GitHubアカウント管理サービス
@@ -208,6 +213,33 @@ export class GitHubService {
 
     // リポジトリを削除
     await githubRepositoryRepository.delete(repository.id)
+  }
+
+  /**
+   * 登録済みの全てのリポジトリからプルリクエストを取得する
+   * @param state - プルリクエストの状態 ('open' | 'closed')
+   * @returns プルリクエストのリスト
+   * @throws Error - API呼び出しが失敗した場合
+   */
+  async getPullRequests(state: GitHubPullRequestState): Promise<GitHubApiPullRequest[]> {
+    const accounts = await githubAccountRepository.findAll()
+    const pullRequests: GitHubApiPullRequest[] = []
+    for (const account of accounts) {
+      const owners = await githubOwnerRepository.findAllByAccountId(account.id)
+      for (const owner of owners) {
+        const repositories = await githubRepositoryRepository.findAllByOwnerId(owner.id)
+        for (const repository of repositories) {
+          const prs = await githubApiRepository.getPullRequests(
+            account.personalAccessToken,
+            owner.login,
+            repository.name,
+            state
+          )
+          pullRequests.push(...prs)
+        }
+      }
+    }
+    return pullRequests
   }
 }
 

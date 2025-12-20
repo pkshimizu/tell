@@ -241,7 +241,7 @@ export class GitHubApiRepository {
     const pulls = (await pullsResponse.json()) as GitHubPullRequestResponse[]
 
     // 各PRのレビュー情報を取得
-    const pullRequestsWithReviews = await Promise.all(
+    return await Promise.all(
       pulls.map(async (pull) => {
         const reviewsResponse = await fetch(
           `${this.baseUrl}/repos/${ownerLogin}/${repositoryName}/pulls/${pull.number}/reviews`,
@@ -333,8 +333,6 @@ export class GitHubApiRepository {
         return pullRequest
       })
     )
-
-    return pullRequestsWithReviews
   }
 }
 

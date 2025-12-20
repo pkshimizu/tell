@@ -58,6 +58,18 @@ export class RepositoryRepository {
   async delete(id: number): Promise<void> {
     await db.delete(githubRepositoryTable).where(eq(githubRepositoryTable.id, id))
   }
+
+  /**
+   * GitHubオーナーIDで全てのリポジトリを取得する
+   * @param ownerId - GitHubオーナーID
+   * @returns GitHubリポジトリのリスト
+   */
+  async findAllByOwnerId(ownerId: number): Promise<GithubRepository[]> {
+    return db
+      .select()
+      .from(githubRepositoryTable)
+      .where(eq(githubRepositoryTable.githubOwnerId, ownerId))
+  }
 }
 
 export const githubRepositoryRepository = new RepositoryRepository()
