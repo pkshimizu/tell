@@ -4,9 +4,10 @@ import TText from '@renderer/components/display/text'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
 import TAvatar from '@renderer/components/display/avatar'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GitHubApiPullRequest, GitHubOwner, GitHubRepository } from '@renderer/types/github'
 import TAlert from '@renderer/components/feedback/alert'
+import TCircularProgress from '@renderer/components/feedback/circular-progress'
 
 export const Route = createFileRoute('/')({
   component: RouteComponent
@@ -44,7 +45,51 @@ function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerReposi
 }
 
 function RouteComponent() {
-  const [pullRequests] = useState<GitHubApiPullRequest[]>([])
+  const [pullRequests, setPullRequests] = useState<GitHubApiPullRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchPullRequests = async (): Promise<void> => {
+      try {
+        setLoading(true)
+        setError(null)
+        const result = await window.api.github.getPullRequests('open')
+        if (result.success && result.data) {
+          setPullRequests(result.data as GitHubApiPullRequest[])
+        } else {
+          setError(result.error || 'Failed to fetch pull requests')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void fetchPullRequests()
+  }, [])
+
+  if (loading) {
+    return (
+      <TColumn gap={1} align="center">
+        <TCircularProgress size={40} />
+        <TText>Loading pull requests...</TText>
+      </TColumn>
+    )
+  }
+
+  if (error) {
+    return (
+      <TColumn gap={1}>
+        <TRow align="center" gap={1}>
+          <GitHubIcon />
+          <TText>Open Pull Requests</TText>
+        </TRow>
+        <TAlert severity="error">{error}</TAlert>
+      </TColumn>
+    )
+  }
 
   return (
     <TColumn gap={1}>
@@ -52,7 +97,7 @@ function RouteComponent() {
         <GitHubIcon />
         <TText>Open Pull Requests</TText>
       </TRow>
-      {pullRequests.length === 0 && <TAlert severity={'success'}>No pull requests</TAlert>}
+      {pullRequests.length === 0 && <TAlert severity={'info'}>No pull requests</TAlert>}
       {groupingPullRequests(pullRequests).map((owner) =>
         owner.repositories.values().map((repository) => (
           <TColumn key={repository.repository.htmlUrl} gap={1}>
