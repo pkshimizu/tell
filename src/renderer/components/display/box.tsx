@@ -10,12 +10,10 @@ interface TBoxProps {
   children?: ReactNode
   /**
    * 背景色
-   * テーマカラー ('primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success')
    */
   backgroundColor?: Color
   /**
    * ボーダーの色
-   * テーマカラー ('primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success')
    */
   borderColor?: Color
   /**

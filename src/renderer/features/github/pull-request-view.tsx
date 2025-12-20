@@ -6,11 +6,11 @@ import TGridItem from '@renderer/components/layout/grid-item'
 import CommentIcon from '@renderer/components/display/icons/comment'
 import AttentionIcon from '@renderer/components/display/icons/attention'
 import TAvatar from '@renderer/components/display/avatar'
-import TBox from "@renderer/components/display/box";
+import TBox from '@renderer/components/display/box'
 
 export default function GitHubPullRequestView() {
   return (
-    <TBox padding={2}>
+    <TBox backgroundColor={'boxBackground'} padding={2}>
       <TGrid columns={['1fr', '160px', '240px']}>
         <TGridItem align={'center'}>
           <TColumn>
