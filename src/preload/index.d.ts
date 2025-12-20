@@ -2,6 +2,7 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type { GithubAccount, GithubRepository } from '@main/database/schemas'
 import type {
   GitHubApiOrganization,
+  GitHubApiPullRequest,
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
 
@@ -55,6 +56,11 @@ interface GitHubAPI {
     repositoryName: string
   ) => Promise<{
     success: boolean
+    error?: string
+  }>
+  getPullRequests: (state: 'open' | 'closed') => Promise<{
+    success: boolean
+    data?: GitHubApiPullRequest[]
     error?: string
   }>
 }

@@ -44,6 +44,15 @@ export class OwnerRepository {
     const results = await db.select().from(githubOwnerTable).where(eq(githubOwnerTable.id, id))
     return results[0]
   }
+
+  /**
+   * GitHubアカウントIDで全てのオーナーを取得する
+   * @param accountId - GitHubアカウントID
+   * @returns GitHubオーナーのリスト
+   */
+  async findAllByAccountId(accountId: number): Promise<GithubOwner[]> {
+    return db.select().from(githubOwnerTable).where(eq(githubOwnerTable.githubAccountId, accountId))
+  }
 }
 
 export const githubOwnerRepository = new OwnerRepository()

@@ -158,6 +158,17 @@ app.whenReady().then(() => {
       }
     }
   )
+  ipcMain.handle('github:getPullRequests', async (_, state: 'open' | 'closed') => {
+    try {
+      const pullRequests = await githubService.getPullRequests(state)
+      return { success: true, data: pullRequests }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
 
   createWindow()
 
