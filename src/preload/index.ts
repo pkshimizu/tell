@@ -30,7 +30,9 @@ const api = {
     getRegisteredRepositories: (accountId: number, ownerLogin: string) =>
       ipcRenderer.invoke('github:getRegisteredRepositories', accountId, ownerLogin),
     removeRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
-      ipcRenderer.invoke('github:removeRepository', accountId, ownerLogin, repositoryName)
+      ipcRenderer.invoke('github:removeRepository', accountId, ownerLogin, repositoryName),
+    getPullRequests: (state: 'open' | 'closed') =>
+      ipcRenderer.invoke('github:getPullRequests', state)
   }
 }
 
