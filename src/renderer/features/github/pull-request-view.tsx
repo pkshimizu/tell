@@ -3,8 +3,6 @@ import TText from '@renderer/components/display/text'
 import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import CheckIcon from '@renderer/components/display/icons/check'
 import TGridItem from '@renderer/components/layout/grid-item'
-import CommentIcon from '@renderer/components/display/icons/comment'
-import AttentionIcon from '@renderer/components/display/icons/attention'
 import TAvatar from '@renderer/components/display/avatar'
 import TBox from '@renderer/components/display/box'
 import { GitHubApiPullRequest, GitHubApiPullRequestReviewStatus } from '@renderer/types/github'
@@ -64,42 +62,6 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
                 </TRow>
               </TGridContents>
             ))}
-            <TRow align={'center'} gap={1}>
-              <TAvatar
-                alt={'user name'}
-                url={'https://avatars.githubusercontent.com/u/300403?v=4'}
-                size={24}
-              />
-              <TText>Reviewer user1 name</TText>
-            </TRow>
-            <TRow align={'center'} gap={1}>
-              <CheckIcon color={'success'} />
-              <TText>10</TText>
-            </TRow>
-            <TRow align={'center'} gap={1}>
-              <TAvatar
-                alt={'user name'}
-                url={'https://avatars.githubusercontent.com/u/300403?v=4'}
-                size={24}
-              />
-              <TText>Reviewer user2 name</TText>
-            </TRow>
-            <TRow align={'center'} gap={1}>
-              <CommentIcon />
-              <TText>10</TText>
-            </TRow>
-            <TRow align={'center'} gap={1}>
-              <TAvatar
-                alt={'user name'}
-                url={'https://avatars.githubusercontent.com/u/300403?v=4'}
-                size={24}
-              />
-              <TText>Reviewer user3 name</TText>
-            </TRow>
-            <TRow align={'center'} gap={1}>
-              <AttentionIcon color={'warning'} />
-              <TText>10</TText>
-            </TRow>
           </TGrid>
         </TColumn>
       </TGrid>

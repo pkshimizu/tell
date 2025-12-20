@@ -41,7 +41,7 @@ function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerReposi
     const repository = owner.repositories.get(pullRequest.repository.name)!
     repository.pullRequests.push(pullRequest)
   }
-  return owners.values().toArray()
+  return Array.from(owners.values())
 }
 
 function RouteComponent() {
@@ -99,7 +99,7 @@ function RouteComponent() {
       </TRow>
       {pullRequests.length === 0 && <TAlert severity={'info'}>No pull requests</TAlert>}
       {groupingPullRequests(pullRequests).map((owner) =>
-        owner.repositories.values().map((repository) => (
+        Array.from(owner.repositories.values()).map((repository) => (
           <TColumn key={repository.repository.htmlUrl} gap={1}>
             <TRow gap={1}>
               <TAvatar alt={owner.owner.login} url={owner.owner.avatarUrl!} size={24} />
