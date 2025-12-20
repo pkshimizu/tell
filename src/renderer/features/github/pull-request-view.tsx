@@ -43,7 +43,7 @@ export default function GitHubPullRequestView() {
             <TText>Reviewer user1 name</TText>
           </TRow>
           <TRow align={'center'} gap={1}>
-            <CheckIcon />
+            <CheckIcon color={'success'} />
             <TText>10</TText>
           </TRow>
           <TRow align={'center'} gap={1}>
@@ -67,7 +67,7 @@ export default function GitHubPullRequestView() {
             <TText>Reviewer user3 name</TText>
           </TRow>
           <TRow align={'center'} gap={1}>
-            <AttentionIcon />
+            <AttentionIcon color={'warning'} />
             <TText>10</TText>
           </TRow>
         </TGrid>
