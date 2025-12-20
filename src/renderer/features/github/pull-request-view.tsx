@@ -7,35 +7,63 @@ import CommentIcon from '@renderer/components/display/icons/comment'
 import AttentionIcon from '@renderer/components/display/icons/attention'
 import TAvatar from '@renderer/components/display/avatar'
 import TBox from '@renderer/components/display/box'
+import { GitHubApiPullRequest, GitHubApiPullRequestReviewStatus } from '@renderer/types/github'
+import useText from '@renderer/hooks/text'
+import TGridContents from '@renderer/components/layout/grid-contents'
 
-export default function GitHubPullRequestView() {
+type Props = {
+  pullRequest: GitHubApiPullRequest
+}
+
+function reviewStatusColor(status: GitHubApiPullRequestReviewStatus) {
+  if (status === 'approved') {
+    return 'success'
+  }
+  if (status === 'commented') {
+    return undefined
+  }
+  return undefined
+}
+
+export default function GitHubPullRequestView({ pullRequest }: Props) {
+  const text = useText()
   return (
     <TBox backgroundColor={'boxBackground'} padding={2}>
       <TGrid columns={['1fr', '160px', '240px']}>
         <TGridItem align={'center'}>
           <TColumn>
-            <TText>Pull request title</TText>
+            <TText>{pullRequest.title}</TText>
             <TRow gap={1}>
-              <TText variant={'caption'}>1 days ago created</TText>
+              <TText variant={'caption'}>{text.fromNow(pullRequest.createdAt)} created</TText>
               <TText variant={'caption'}>/</TText>
-              <TText variant={'caption'}>1 days ago updated</TText>
+              <TText variant={'caption'}>{text.fromNow(pullRequest.updatedAt)} updated</TText>
             </TRow>
           </TColumn>
         </TGridItem>
         <TColumn>
           <TText variant={'caption'}>Assignees</TText>
-          <TRow align={'center'} gap={1}>
-            <TAvatar
-              alt={'user name'}
-              url={'https://avatars.githubusercontent.com/u/300403?v=4'}
-              size={24}
-            />
-            <TText>Assignee user name</TText>
-          </TRow>
+          {pullRequest.assignees.map((assignee) => (
+            <TRow key={assignee.name} align={'center'} gap={1}>
+              <TAvatar alt={assignee.name} url={assignee.avatarUrl} size={24} />
+              <TText>{assignee.name}</TText>
+            </TRow>
+          ))}
         </TColumn>
         <TColumn>
           <TText variant={'caption'}>Reviewers</TText>
           <TGrid columns={['1fr', '64px']}>
+            {pullRequest.reviewers.map((reviewer) => (
+              <TGridContents key={reviewer.name}>
+                <TRow align={'center'} gap={1}>
+                  <TAvatar alt={reviewer.name} url={reviewer.avatarUrl} size={24} />
+                  <TText>{reviewer.name}</TText>
+                </TRow>
+                <TRow align={'center'} gap={1}>
+                  <CheckIcon color={reviewStatusColor(reviewer.status)} />
+                  <TText>{reviewer.comments}</TText>
+                </TRow>
+              </TGridContents>
+            ))}
             <TRow align={'center'} gap={1}>
               <TAvatar
                 alt={'user name'}
