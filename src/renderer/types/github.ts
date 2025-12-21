@@ -24,7 +24,12 @@ export interface GitHubApiPullRequestAssignee {
   avatarUrl: string
 }
 
-export type GitHubApiPullRequestReviewStatus = 'approved' | 'commented' | 'no-review'
+export type GitHubApiPullRequestReviewStatus =
+  | 'approved'
+  | 'changes_requested'
+  | 'commented'
+  | 'pending'
+  | 'dismissed'
 
 export interface GitHubApiPullRequestReviewer {
   name: string

@@ -21,12 +21,19 @@ export interface GitHubApiPullRequestAssignee {
   avatarUrl: string
 }
 
+export type GitHubApiPullRequestStatus =
+  | 'approved'
+  | 'changes_requested'
+  | 'commented'
+  | 'pending'
+  | 'dismissed'
+
 export interface GitHubApiPullRequestReviewer {
   name: string
   htmlUrl: string
   avatarUrl: string
   comments: number
-  status: 'approved' | 'commented' | 'no-review'
+  status: GitHubApiPullRequestStatus
 }
 
 export type GitHubPullRequestState = 'open' | 'closed'
