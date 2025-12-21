@@ -149,7 +149,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y snapcraft
+          sudo snap install snapcraft --classic
           npm ci
 
       - name: Build Linux app
