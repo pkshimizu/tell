@@ -6,7 +6,7 @@ on:
 
 jobs:
   check-version:
-    name: Check Version Update
+    name: Check Version Consistency
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
@@ -19,48 +19,40 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $VERSION"
+          echo "package.json version: $VERSION"
 
-      - name: Get latest release
-        id: latest-release
+      - name: Get release tag version
+        id: tag-version
         run: |
-          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No previous releases found"
-            echo "is_first_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "Latest release tag: $LATEST_TAG"
-            echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-            echo "is_first_release=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Compare versions
-        if: steps.latest-release.outputs.is_first_release != 'true'
-        run: |
-          CURRENT_VERSION="${{ steps.get-version.outputs.version }}"
-          LATEST_TAG="${{ steps.latest-release.outputs.latest_tag }}"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          echo "Release tag: $RELEASE_TAG"
 
           # Remove 'release/' prefix if present
-          LATEST_VERSION="${LATEST_TAG#release/}"
+          TAG_VERSION="${RELEASE_TAG#release/}"
           # Remove 'v' prefix if present
-          LATEST_VERSION="${LATEST_VERSION#v}"
+          TAG_VERSION="${TAG_VERSION#v}"
 
-          echo "Comparing versions: $CURRENT_VERSION vs $LATEST_VERSION"
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $TAG_VERSION"
 
-          if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
-            echo "Error: Version $CURRENT_VERSION is the same as the latest release"
+      - name: Verify version consistency
+        run: |
+          PACKAGE_VERSION="${{ steps.get-version.outputs.version }}"
+          TAG_VERSION="${{ steps.tag-version.outputs.tag_version }}"
+
+          echo "Verifying versions:"
+          echo "  package.json: $PACKAGE_VERSION"
+          echo "  Release tag:  $TAG_VERSION"
+
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Version mismatch!"
+            echo "  package.json has version $PACKAGE_VERSION"
+            echo "  but release tag is $TAG_VERSION"
+            echo "Please ensure package.json version matches the release tag."
             exit 1
           fi
 
-          # Simple version comparison (assuming semver format)
-          if [ "$(printf '%s\n' "$LATEST_VERSION" "$CURRENT_VERSION" | sort -V | head -n1)" = "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-            echo "Error: Version $CURRENT_VERSION is older than the latest release $LATEST_VERSION"
-            exit 1
-          fi
-
-          echo "Version check passed: $CURRENT_VERSION > $LATEST_VERSION"
+          echo "✓ Version check passed: $PACKAGE_VERSION"
 
   build-windows:
     name: Build Windows
