@@ -64,9 +64,8 @@ $ npm run build:linux
 
 4. **自動ビルド**
    - GitHub Actionsが自動的に起動し、以下のバイナリを生成します：
-     - Windows: `tell-{version}-setup.exe`
-     - macOS: `tell-{version}.dmg`
-     - Linux: `tell-{version}.AppImage`, `tell-{version}.snap`, `tell-{version}.deb`
+     - Windows: `tell-{version}-setup.exe` (x64)
+     - macOS: `tell-{version}.dmg` (Universal: Intel & Apple Silicon)
    - 生成されたバイナリは自動的にリリースページにアップロードされます
 
 ### バージョン管理
