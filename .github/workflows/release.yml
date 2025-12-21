@@ -41,7 +41,11 @@ jobs:
         run: |
           CURRENT_VERSION="${{ steps.get-version.outputs.version }}"
           LATEST_TAG="${{ steps.latest-release.outputs.latest_tag }}"
-          LATEST_VERSION="${LATEST_TAG#v}"
+
+          # Remove 'release/' prefix if present
+          LATEST_VERSION="${LATEST_TAG#release/}"
+          # Remove 'v' prefix if present
+          LATEST_VERSION="${LATEST_VERSION#v}"
 
           echo "Comparing versions: $CURRENT_VERSION vs $LATEST_VERSION"
 
