@@ -33,6 +33,9 @@ const api = {
       ipcRenderer.invoke('github:removeRepository', accountId, ownerLogin, repositoryName),
     getPullRequests: (state: 'open' | 'closed') =>
       ipcRenderer.invoke('github:getPullRequests', state)
+  },
+  app: {
+    getVersion: () => ipcRenderer.invoke('app:getVersion')
   }
 }
 

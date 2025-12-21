@@ -65,8 +65,13 @@ interface GitHubAPI {
   }>
 }
 
+interface AppAPI {
+  getVersion: () => Promise<string>
+}
+
 interface API {
   github: GitHubAPI
+  app: AppAPI
 }
 
 declare global {
