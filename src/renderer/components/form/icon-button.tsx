@@ -6,6 +6,7 @@ interface Props {
   color?: ThemeColor
   children: ReactNode
   loading?: boolean
+  disabled?: boolean
   onClick?: (element: Element) => void
 }
 
@@ -17,7 +18,12 @@ export default function TIconButton(props: Props) {
   }
 
   return (
-    <IconButton color={props.color} onClick={handleClick} loading={props.loading}>
+    <IconButton
+      color={props.color}
+      onClick={handleClick}
+      loading={props.loading}
+      disabled={props.disabled}
+    >
       {props.children}
     </IconButton>
   )

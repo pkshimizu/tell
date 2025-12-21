@@ -1,3 +1,5 @@
 export type ThemeColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success'
 
-export type Color = ThemeColor
+export type BackgroundColor = 'boxBackground'
+
+export type Color = ThemeColor | BackgroundColor

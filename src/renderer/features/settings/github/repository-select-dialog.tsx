@@ -19,7 +19,7 @@ interface Props {
 interface Owner {
   login: string
   htmlUrl: string
-  avatarUrl: string
+  avatarUrl: string | null
 }
 
 interface Repository {

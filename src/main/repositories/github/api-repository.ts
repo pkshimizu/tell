@@ -5,7 +5,8 @@ import {
   GitHubApiPullRequest,
   GitHubApiPullRequestAssignee,
   GitHubApiPullRequestReviewer,
-  GitHubPullRequestState
+  GitHubPullRequestState,
+  GitHubApiPullRequestStatus
 } from '@main/models/github'
 
 interface GitHubUserResponse {
@@ -43,7 +44,7 @@ interface GitHubPullRequestResponse {
   updated_at: string
   user: GitHubUserResponse
   assignees: GitHubUserResponse[]
-  reviewers: GitHubUserResponse[]
+  requested_reviewers: GitHubUserResponse[]
   base: {
     repo: {
       name: string
@@ -157,7 +158,7 @@ export class GitHubApiRepository {
 
     return data.map((org) => ({
       login: org.login,
-      htmlUrl: org.html_url,
+      htmlUrl: `https://github.com/${org.login}`,
       avatarUrl: org.avatar_url
     }))
   }
@@ -262,6 +263,7 @@ export class GitHubApiRepository {
         // アサイニー情報を変換
         const assignees: GitHubApiPullRequestAssignee[] = pull.assignees.map((assignee) => ({
           name: assignee.login,
+          htmlUrl: assignee.html_url,
           avatarUrl: assignee.avatar_url
         }))
 
@@ -269,13 +271,13 @@ export class GitHubApiRepository {
         const reviewerMap = new Map<string, GitHubApiPullRequestReviewer>()
 
         // リクエストされたレビュワーを追加（まだレビューしていない）
-        pull.reviewers.forEach((reviewer) => {
+        pull.requested_reviewers.forEach((reviewer) => {
           reviewerMap.set(reviewer.login, {
             name: reviewer.login,
             htmlUrl: reviewer.html_url,
             avatarUrl: reviewer.avatar_url,
             comments: 0,
-            status: 'no-review'
+            status: 'pending'
           })
         })
 
@@ -291,10 +293,27 @@ export class GitHubApiRepository {
             // 既存のレビュワーを更新
             existing.comments += commentCount
             // ステータスを更新（APPROVEDが最優先）
-            if (review.state === 'APPROVED') {
-              existing.status = 'approved'
-            } else if (existing.status !== 'approved' && review.state === 'COMMENTED') {
-              existing.status = 'commented'
+            switch (review.state) {
+              case 'APPROVED':
+                existing.status = 'approved'
+                break
+              case 'CHANGES_REQUESTED':
+                existing.status = 'changes_requested'
+                break
+              case 'COMMENTED':
+                if (existing.status !== 'approved') {
+                  existing.status = 'commented'
+                }
+                break
+              case 'PENDING':
+                if (existing.status !== 'approved') {
+                  existing.status = 'pending'
+                }
+                break
+              case 'DISMISSED':
+                if (existing.status !== 'approved') {
+                  existing.status = 'dismissed'
+                }
             }
           } else {
             // 新しいレビュワーを追加
@@ -303,7 +322,7 @@ export class GitHubApiRepository {
               htmlUrl: review.user.html_url,
               avatarUrl: review.user.avatar_url,
               comments: commentCount,
-              status: review.state === 'APPROVED' ? 'approved' : 'commented'
+              status: review.state.toLowerCase() as GitHubApiPullRequestStatus
             })
           }
         })
