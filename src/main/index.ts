@@ -170,6 +170,11 @@ app.whenReady().then(() => {
     }
   })
 
+  // App version IPC handler
+  ipcMain.handle('app:getVersion', () => {
+    return app.getVersion()
+  })
+
   createWindow()
 
   app.on('activate', function () {
