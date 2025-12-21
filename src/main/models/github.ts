@@ -18,6 +18,7 @@ export interface GitHubApiRepository {
 
 export interface GitHubApiPullRequestAssignee {
   name: string
+  htmlUrl: string
   avatarUrl: string
 }
 

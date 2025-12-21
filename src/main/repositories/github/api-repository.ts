@@ -263,6 +263,7 @@ export class GitHubApiRepository {
         // アサイニー情報を変換
         const assignees: GitHubApiPullRequestAssignee[] = pull.assignees.map((assignee) => ({
           name: assignee.login,
+          htmlUrl: assignee.html_url,
           avatarUrl: assignee.avatar_url
         }))
 

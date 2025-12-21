@@ -21,6 +21,7 @@ export interface GitHubRepository {
 
 export interface GitHubApiPullRequestAssignee {
   name: string
+  htmlUrl: string
   avatarUrl: string
 }
 

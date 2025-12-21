@@ -13,6 +13,7 @@ import AttentionIcon from '@renderer/components/display/icons/attention'
 import PendingIcon from '@renderer/components/display/icons/pending'
 import DismissedIcon from '@renderer/components/display/icons/dismissed'
 import QuestionIcon from '@renderer/components/display/icons/question'
+import TLink from '@renderer/components/navigation/link'
 
 type Props = {
   pullRequest: GitHubApiPullRequest
@@ -44,7 +45,9 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
       <TGrid columns={['1fr', '160px', '240px']} gap={1}>
         <TGridItem align={'center'}>
           <TColumn>
-            <TText>{pullRequest.title}</TText>
+            <TLink href={pullRequest.htmlUrl}>
+              <TText>{pullRequest.title}</TText>
+            </TLink>
             <TRow gap={1}>
               <TText variant={'caption'}>{text.fromNow(pullRequest.createdAt)} created</TText>
               <TText variant={'caption'}>/</TText>
@@ -55,21 +58,25 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
         <TColumn>
           <TText variant={'caption'}>Assignees</TText>
           {pullRequest.assignees.map((assignee) => (
-            <TRow key={assignee.name} align={'center'} gap={1}>
-              <TAvatar alt={assignee.name} url={assignee.avatarUrl} size={24} />
-              <TText>{assignee.name}</TText>
-            </TRow>
+            <TLink key={assignee.name} href={assignee.htmlUrl}>
+              <TRow align={'center'} gap={1}>
+                <TAvatar alt={assignee.name} url={assignee.avatarUrl} size={24} />
+                <TText>{assignee.name}</TText>
+              </TRow>
+            </TLink>
           ))}
         </TColumn>
         <TColumn gap={1}>
           <TText variant={'caption'}>Reviewers</TText>
-          <TGrid columns={['1fr', '64px']}>
+          <TGrid columns={['1fr', '64px']} rowGap={1}>
             {pullRequest.reviewers.map((reviewer) => (
               <TGridContents key={reviewer.name}>
-                <TRow align={'center'} gap={1}>
-                  <TAvatar alt={reviewer.name} url={reviewer.avatarUrl} size={24} />
-                  <TText>{reviewer.name}</TText>
-                </TRow>
+                <TLink href={reviewer.htmlUrl}>
+                  <TRow align={'center'} gap={1}>
+                    <TAvatar alt={reviewer.name} url={reviewer.avatarUrl} size={24} />
+                    <TText>{reviewer.name}</TText>
+                  </TRow>
+                </TLink>
                 <TRow align={'center'} gap={1}>
                   <ReviewStatusIcon status={reviewer.status} />
                   <TText>{reviewer.comments}</TText>
