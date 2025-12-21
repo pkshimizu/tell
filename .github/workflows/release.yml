@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  check-version:
+    name: Check Version Update
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get package.json version
+        id: get-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Get latest release
+        id: latest-release
+        run: |
+          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous releases found"
+            echo "is_first_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "Latest release tag: $LATEST_TAG"
+            echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "is_first_release=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Compare versions
+        if: steps.latest-release.outputs.is_first_release != 'true'
+        run: |
+          CURRENT_VERSION="${{ steps.get-version.outputs.version }}"
+          LATEST_TAG="${{ steps.latest-release.outputs.latest_tag }}"
+          LATEST_VERSION="${LATEST_TAG#v}"
+
+          echo "Comparing versions: $CURRENT_VERSION vs $LATEST_VERSION"
+
+          if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
+            echo "Error: Version $CURRENT_VERSION is the same as the latest release"
+            exit 1
+          fi
+
+          # Simple version comparison (assuming semver format)
+          if [ "$(printf '%s\n' "$LATEST_VERSION" "$CURRENT_VERSION" | sort -V | head -n1)" = "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "Error: Version $CURRENT_VERSION is older than the latest release $LATEST_VERSION"
+            exit 1
+          fi
+
+          echo "Version check passed: $CURRENT_VERSION > $LATEST_VERSION"
+
+  build-windows:
+    name: Build Windows
+    needs: check-version
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows app
+        run: npm run build:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            dist/*.exe
+          retention-days: 7
+
+      - name: Upload to release
+        run: |
+          $files = Get-ChildItem -Path dist -Filter *.exe
+          foreach ($file in $files) {
+            gh release upload ${{ github.event.release.tag_name }} $file.FullName
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build-macos:
+    name: Build macOS
+    needs: check-version
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS app
+        run: npm run build:mac
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            dist/*.dmg
+          retention-days: 7
+
+      - name: Upload to release
+        run: |
+          for file in dist/*.dmg; do
+            if [ -f "$file" ]; then
+              gh release upload ${{ github.event.release.tag_name }} "$file"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build-linux:
+    name: Build Linux
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapcraft
+          npm ci
+
+      - name: Build Linux app
+        run: npm run build:linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+          retention-days: 7
+
+      - name: Upload to release
+        run: |
+          for file in dist/*.AppImage dist/*.snap dist/*.deb; do
+            if [ -f "$file" ]; then
+              gh release upload ${{ github.event.release.tag_name }} "$file"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
