@@ -4,35 +4,44 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   github: {
-    createAccount: (personalAccessToken: string) =>
-      ipcRenderer.invoke('github:createAccount', personalAccessToken),
-    getAccounts: () => ipcRenderer.invoke('github:getAccounts'),
     getOwners: (accountId: number) => ipcRenderer.invoke('github:getOwners', accountId),
     getRepositories: (accountId: number, organizationLogin: string) =>
       ipcRenderer.invoke('github:getRepositories', accountId, organizationLogin),
-    addRepository: (
-      accountId: number,
-      ownerLogin: string,
-      ownerHtmlUrl: string,
-      ownerAvatarUrl: string | null,
-      repositoryName: string,
-      repositoryHtmlUrl: string
-    ) =>
-      ipcRenderer.invoke(
-        'github:addRepository',
-        accountId,
-        ownerLogin,
-        ownerHtmlUrl,
-        ownerAvatarUrl,
-        repositoryName,
-        repositoryHtmlUrl
-      ),
-    getRegisteredRepositories: (accountId: number, ownerLogin: string) =>
-      ipcRenderer.invoke('github:getRegisteredRepositories', accountId, ownerLogin),
-    removeRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
-      ipcRenderer.invoke('github:removeRepository', accountId, ownerLogin, repositoryName),
     getPullRequests: (state: 'open' | 'closed') =>
       ipcRenderer.invoke('github:getPullRequests', state)
+  },
+  settings: {
+    github: {
+      addAccount: (personalAccessToken: string) =>
+        ipcRenderer.invoke('settings:github:addAccount', personalAccessToken),
+      getAccounts: () => ipcRenderer.invoke('settings:github:getAccounts'),
+      addRepository: (
+        accountId: number,
+        ownerLogin: string,
+        ownerHtmlUrl: string,
+        ownerAvatarUrl: string | null,
+        repositoryName: string,
+        repositoryHtmlUrl: string
+      ) =>
+        ipcRenderer.invoke(
+          'settings:github:addRepository',
+          accountId,
+          ownerLogin,
+          ownerHtmlUrl,
+          ownerAvatarUrl,
+          repositoryName,
+          repositoryHtmlUrl
+        ),
+      getRepositories: (accountId: number, ownerLogin: string) =>
+        ipcRenderer.invoke('settings:github:getRepositories', accountId, ownerLogin),
+      removeRepository: (accountId: number, ownerLogin: string, repositoryName: string) =>
+        ipcRenderer.invoke(
+          'settings:github:removeRepository',
+          accountId,
+          ownerLogin,
+          repositoryName
+        )
+    }
   },
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion')

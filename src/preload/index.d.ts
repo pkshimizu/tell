@@ -7,16 +7,6 @@ import type {
 } from '@main/models/github'
 
 interface GitHubAPI {
-  createAccount: (personalAccessToken: string) => Promise<{
-    success: boolean
-    data?: GithubAccount
-    error?: string
-  }>
-  getAccounts: () => Promise<{
-    success: boolean
-    data?: GithubAccount[]
-    error?: string
-  }>
   getOwners: (accountId: number) => Promise<{
     success: boolean
     data?: GitHubApiOrganization[]
@@ -28,6 +18,24 @@ interface GitHubAPI {
   ) => Promise<{
     success: boolean
     data?: GitHubApiRepositoryModel[]
+    error?: string
+  }>
+  getPullRequests: (state: 'open' | 'closed') => Promise<{
+    success: boolean
+    data?: GitHubApiPullRequest[]
+    error?: string
+  }>
+}
+
+interface SettingsGitHubAPI {
+  addAccount: (personalAccessToken: string) => Promise<{
+    success: boolean
+    data?: GithubAccount
+    error?: string
+  }>
+  getAccounts: () => Promise<{
+    success: boolean
+    data?: GithubAccount[]
     error?: string
   }>
   addRepository: (
@@ -42,7 +50,7 @@ interface GitHubAPI {
     data?: GithubRepository
     error?: string
   }>
-  getRegisteredRepositories: (
+  getRepositories: (
     accountId: number,
     ownerLogin: string
   ) => Promise<{
@@ -58,11 +66,6 @@ interface GitHubAPI {
     success: boolean
     error?: string
   }>
-  getPullRequests: (state: 'open' | 'closed') => Promise<{
-    success: boolean
-    data?: GitHubApiPullRequest[]
-    error?: string
-  }>
 }
 
 interface AppAPI {
@@ -71,6 +74,9 @@ interface AppAPI {
 
 interface API {
   github: GitHubAPI
+  settings: {
+    github: SettingsGitHubAPI
+  }
   app: AppAPI
 }
 

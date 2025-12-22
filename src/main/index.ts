@@ -3,7 +3,9 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '@resources/icon.png?asset'
 import { githubService } from '@main/services/github-service'
-import { githubAccountRepository } from '@main/repositories/github/account-repository'
+import { githubStoreRepository } from '@main/repositories/store/settings/github-repository'
+import { settingsService } from '@main/services/settings-service'
+import { initializeStore } from '@main/store'
 
 function createWindow(): void {
   // Create the browser window.
@@ -42,7 +44,10 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize electron-store (ESM package requires dynamic import)
+  await initializeStore()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -57,9 +62,9 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // GitHub Service IPC handlers
-  ipcMain.handle('github:createAccount', async (_, personalAccessToken: string) => {
+  ipcMain.handle('settings:github:addAccount', async (_, personalAccessToken: string) => {
     try {
-      const account = await githubService.createAccount(personalAccessToken)
+      const account = await settingsService.addGitHubAccount(personalAccessToken)
       return { success: true, data: account }
     } catch (error) {
       return {
@@ -68,9 +73,9 @@ app.whenReady().then(() => {
       }
     }
   })
-  ipcMain.handle('github:getAccounts', async () => {
+  ipcMain.handle('settings:github:getAccounts', async () => {
     try {
-      const accounts = await githubAccountRepository.findAll()
+      const accounts = githubStoreRepository.findAllAccounts()
       return { success: true, data: accounts }
     } catch (error) {
       return {
@@ -79,7 +84,7 @@ app.whenReady().then(() => {
       }
     }
   })
-  ipcMain.handle('github:getOwners', async (_, accountId: number) => {
+  ipcMain.handle('github:getOwners', async (_, accountId: string) => {
     try {
       const owners = await githubService.getOwners(accountId)
       return { success: true, data: owners }
@@ -90,7 +95,7 @@ app.whenReady().then(() => {
       }
     }
   })
-  ipcMain.handle('github:getRepositories', async (_, accountId: number, ownerLogin: string) => {
+  ipcMain.handle('github:getRepositories', async (_, accountId: string, ownerLogin: string) => {
     try {
       const repositories = await githubService.getRepositories(accountId, ownerLogin)
       return { success: true, data: repositories }
@@ -102,10 +107,10 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle(
-    'github:addRepository',
+    'settings:github:addRepository',
     async (
       _,
-      accountId: number,
+      accountId: string,
       ownerLogin: string,
       ownerHtmlUrl: string,
       ownerAvatarUrl: string | null,
@@ -113,7 +118,7 @@ app.whenReady().then(() => {
       repositoryHtmlUrl: string
     ) => {
       try {
-        const repository = await githubService.addRepository(
+        const repository = await settingsService.addGitHubRepository(
           accountId,
           ownerLogin,
           ownerHtmlUrl,
@@ -131,10 +136,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:getRegisteredRepositories',
-    async (_, accountId: number, ownerLogin: string) => {
+    'settings:github:getRepositories',
+    async (_, accountId: string, ownerLogin: string) => {
       try {
-        const repositories = await githubService.getRegisteredRepositories(accountId, ownerLogin)
+        const repositories = await settingsService.getGitHubRepositories(accountId, ownerLogin)
         return { success: true, data: repositories }
       } catch (error) {
         return {
@@ -145,10 +150,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:removeRepository',
-    async (_, accountId: number, ownerLogin: string, repositoryName: string) => {
+    'settings:github:removeRepository',
+    async (_, accountId: string, ownerLogin: string, repositoryName: string) => {
       try {
-        await githubService.removeRepository(accountId, ownerLogin, repositoryName)
+        await settingsService.removeGitHubRepository(accountId, ownerLogin, repositoryName)
         return { success: true }
       } catch (error) {
         return {

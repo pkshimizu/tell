@@ -52,7 +52,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   const loadRegisteredRepositories = useCallback(async () => {
     if (!props.accountId || !selectedOwner) return
 
-    const result = await window.api.github.getRegisteredRepositories(props.accountId, selectedOwner)
+    const result = await window.api.settings.github.getRepositories(props.accountId, selectedOwner)
     if (result.success && result.data) {
       setRegisteredRepositories(new Set(result.data.map((repo) => repo.name)))
     }
@@ -64,7 +64,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
     const owner = owners.find((o) => o.login === selectedOwner)
     if (!owner) return
 
-    const result = await window.api.github.addRepository(
+    const result = await window.api.settings.github.addRepository(
       props.accountId,
       owner.login,
       owner.htmlUrl,
@@ -81,7 +81,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
   const handleRemoveRepository = async (repository: Repository) => {
     if (!props.accountId) return
 
-    const result = await window.api.github.removeRepository(
+    const result = await window.api.settings.github.removeRepository(
       props.accountId,
       selectedOwner,
       repository.name

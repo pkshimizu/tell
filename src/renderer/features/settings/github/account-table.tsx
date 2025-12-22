@@ -17,7 +17,7 @@ export default function GitHubAccountTable() {
 
   useEffect(() => {
     ;(async () => {
-      const result = await window.api.github.getAccounts()
+      const result = await window.api.settings.github.getAccounts()
       if (result.success && result.data) {
         setAccounts(result.data)
       }
