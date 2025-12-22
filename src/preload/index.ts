@@ -12,8 +12,8 @@ const api = {
   },
   settings: {
     github: {
-      createAccount: (personalAccessToken: string) =>
-        ipcRenderer.invoke('settings:github:createAccount', personalAccessToken),
+      addAccount: (personalAccessToken: string) =>
+        ipcRenderer.invoke('settings:github:addAccount', personalAccessToken),
       getAccounts: () => ipcRenderer.invoke('settings:github:getAccounts'),
       addRepository: (
         accountId: number,

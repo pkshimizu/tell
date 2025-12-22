@@ -31,7 +31,7 @@ export class SettingsService {
     }
 
     // storeに保存
-    return githubStoreRepository.createAccount({
+    return githubStoreRepository.addAccount({
       login: accountInfo.login,
       name: accountInfo.name,
       htmlUrl: accountInfo.htmlUrl,

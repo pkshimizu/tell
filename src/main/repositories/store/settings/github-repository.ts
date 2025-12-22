@@ -40,9 +40,7 @@ export class StoreSettingsGithubRepository {
   /**
    * 新規GitHubアカウントを登録する
    */
-  createAccount(
-    data: Omit<StoreSettingsGitHubAccount, 'id' | 'owners'>
-  ): StoreSettingsGitHubAccount {
+  addAccount(data: Omit<StoreSettingsGitHubAccount, 'id' | 'owners'>): StoreSettingsGitHubAccount {
     const accounts = this.findAllAccounts()
     const newAccount: StoreSettingsGitHubAccount = {
       id: randomUUID(),

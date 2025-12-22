@@ -58,7 +58,7 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // GitHub Service IPC handlers
-  ipcMain.handle('settings:github:createAccount', async (_, personalAccessToken: string) => {
+  ipcMain.handle('settings:github:addAccount', async (_, personalAccessToken: string) => {
     try {
       const account = await settingsService.addGitHubAccount(personalAccessToken)
       return { success: true, data: account }
