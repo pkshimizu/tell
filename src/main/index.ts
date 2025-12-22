@@ -5,6 +5,7 @@ import icon from '@resources/icon.png?asset'
 import { githubService } from '@main/services/github-service'
 import { githubStoreRepository } from '@main/repositories/store/settings/github-repository'
 import { settingsService } from '@main/services/settings-service'
+import { initializeStore } from '@main/store'
 
 function createWindow(): void {
   // Create the browser window.
@@ -43,7 +44,10 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize electron-store (ESM package requires dynamic import)
+  await initializeStore()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 

@@ -1,4 +1,4 @@
-import { store } from '@main/store'
+import { getStore } from '@main/store'
 import type {
   StoreSettingsGitHubAccount,
   StoreSettingsGitHubOwner,
@@ -17,6 +17,7 @@ export class StoreSettingsGithubRepository {
    * 全てのGitHubアカウントを取得する
    */
   findAllAccounts(): StoreSettingsGitHubAccount[] {
+    const store = getStore()
     const github = store.get(this.GITHUB_KEY)
     return github.accounts
   }
@@ -41,6 +42,7 @@ export class StoreSettingsGithubRepository {
    * 新規GitHubアカウントを登録する
    */
   addAccount(data: Omit<StoreSettingsGitHubAccount, 'id' | 'owners'>): StoreSettingsGitHubAccount {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const newAccount: StoreSettingsGitHubAccount = {
       id: randomUUID(),
@@ -59,6 +61,7 @@ export class StoreSettingsGithubRepository {
     id: string,
     data: Partial<Omit<StoreSettingsGitHubAccount, 'id' | 'owners'>>
   ): StoreSettingsGitHubAccount | undefined {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const index = accounts.findIndex((account) => account.id === id)
     if (index === -1) return undefined
@@ -72,6 +75,7 @@ export class StoreSettingsGithubRepository {
    * GitHubアカウントを削除する
    */
   deleteAccount(id: string): void {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const filtered = accounts.filter((account) => account.id !== id)
     store.set(this.GITHUB_KEY, { accounts: filtered })
@@ -100,6 +104,7 @@ export class StoreSettingsGithubRepository {
    * Ownerを追加または更新する
    */
   upsertOwner(accountId: string, ownerData: StoreSettingsGitHubOwner): StoreSettingsGitHubOwner {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const accountIndex = accounts.findIndex((account) => account.id === accountId)
     if (accountIndex === -1) {
@@ -137,6 +142,7 @@ export class StoreSettingsGithubRepository {
     ownerLogin: string,
     repositoryData: StoreSettingsGitHubRepository
   ): StoreSettingsGitHubRepository {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const accountIndex = accounts.findIndex((account) => account.id === accountId)
     if (accountIndex === -1) {
@@ -164,6 +170,7 @@ export class StoreSettingsGithubRepository {
    * Repositoryを削除する
    */
   deleteRepository(accountId: string, ownerLogin: string, repositoryName: string): void {
+    const store = getStore()
     const accounts = this.findAllAccounts()
     const accountIndex = accounts.findIndex((account) => account.id === accountId)
     if (accountIndex === -1) return
