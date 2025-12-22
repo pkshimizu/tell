@@ -70,6 +70,36 @@ interface GitHubReviewResponse {
 export class GitHubApiRepository {
   private readonly baseUrl = 'https://api.github.com'
 
+  /**
+   * レート制限エラーをチェックして、わかりやすいエラーメッセージを生成する
+   */
+  private async handleApiError(response: Response, defaultMessage: string): Promise<never> {
+    const errorBody = await response.text()
+
+    // レート制限エラーのチェック
+    if (response.status === 403) {
+      try {
+        const errorJson = JSON.parse(errorBody)
+        if (errorJson.message?.includes('rate limit exceeded')) {
+          const resetTime = response.headers.get('x-ratelimit-reset')
+          if (resetTime) {
+            const resetDate = new Date(parseInt(resetTime) * 1000)
+            throw new Error(
+              `GitHub API rate limit exceeded. Please try again after ${resetDate.toLocaleTimeString()}.`
+            )
+          }
+          throw new Error('GitHub API rate limit exceeded. Please try again later.')
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.includes('rate limit')) {
+          throw e
+        }
+      }
+    }
+
+    throw new Error(`${defaultMessage}: ${response.status} ${response.statusText} - ${errorBody}`)
+  }
+
   async getAccount(personalAccessToken: string): Promise<GitHubApiAccount> {
     const response = await fetch(`${this.baseUrl}/user`, {
       headers: {
@@ -80,10 +110,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch GitHub user info: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch GitHub user info')
     }
 
     const data = (await response.json()) as GitHubUserResponse
@@ -233,10 +260,7 @@ export class GitHubApiRepository {
     )
 
     if (!pullsResponse.ok) {
-      const errorBody = await pullsResponse.text()
-      throw new Error(
-        `Failed to fetch pull requests: ${pullsResponse.status} ${pullsResponse.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(pullsResponse, 'Failed to fetch pull requests')
     }
 
     const pulls = (await pullsResponse.json()) as GitHubPullRequestResponse[]

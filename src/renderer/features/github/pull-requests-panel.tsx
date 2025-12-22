@@ -87,10 +87,15 @@ export default function GitHubPullRequestsPanel(props: Props) {
     // 初回読み込み
     void fetchPullRequests(true)
 
-    // 60秒ごとにポーリング
-    const intervalId = setInterval(() => {
-      void fetchPullRequests(false)
-    }, 60000)
+    // 5分ごとにポーリング
+    // GitHub APIのレート制限: 5,000リクエスト/時間
+    // 5分間隔であれば、最大12リクエスト/時間となり、レート制限に余裕がある
+    const intervalId = setInterval(
+      () => {
+        void fetchPullRequests(false)
+      },
+      5 * 60 * 1000
+    ) // 5分 = 300,000ms
 
     // クリーンアップ
     return () => {
