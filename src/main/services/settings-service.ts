@@ -15,7 +15,7 @@ export class SettingsService {
    * @returns 保存されたGitHubアカウント情報
    * @throws Error - アカウントが既に登録されている場合、またはAPI呼び出しが失敗した場合
    */
-  async createAccount(personalAccessToken: string): Promise<StoreSettingsGitHubAccount> {
+  async addGitHubAccount(personalAccessToken: string): Promise<StoreSettingsGitHubAccount> {
     // GitHub APIからアカウント情報を取得
     const accountInfo = await githubApiRepository.getAccount(personalAccessToken)
 
@@ -52,7 +52,7 @@ export class SettingsService {
    * @returns 保存されたGitHubリポジトリ
    * @throws Error - アカウントが見つからない場合、またはstore操作が失敗した場合
    */
-  async addRepository(
+  async addGitHubRepository(
     accountId: string,
     ownerLogin: string,
     ownerHtmlUrl: string,
@@ -92,7 +92,7 @@ export class SettingsService {
    * @returns 選択済みリポジトリのリスト
    * @throws Error - アカウントが見つからない場合
    */
-  async getRegisteredRepositories(
+  async getGitHubRepositories(
     accountId: string,
     ownerLogin: string
   ): Promise<StoreSettingsGitHubRepository[]> {
@@ -113,7 +113,7 @@ export class SettingsService {
    * @param repositoryName - リポジトリ名
    * @throws Error - アカウントが見つからない場合、またはstore操作が失敗した場合
    */
-  async removeRepository(
+  async removeGitHubRepository(
     accountId: string,
     ownerLogin: string,
     repositoryName: string

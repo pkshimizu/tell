@@ -58,9 +58,9 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   // GitHub Service IPC handlers
-  ipcMain.handle('github:createAccount', async (_, personalAccessToken: string) => {
+  ipcMain.handle('settings:github:createAccount', async (_, personalAccessToken: string) => {
     try {
-      const account = await settingsService.createAccount(personalAccessToken)
+      const account = await settingsService.addGitHubAccount(personalAccessToken)
       return { success: true, data: account }
     } catch (error) {
       return {
@@ -69,7 +69,7 @@ app.whenReady().then(() => {
       }
     }
   })
-  ipcMain.handle('github:getAccounts', async () => {
+  ipcMain.handle('settings:github:getAccounts', async () => {
     try {
       const accounts = githubStoreRepository.findAllAccounts()
       return { success: true, data: accounts }
@@ -103,7 +103,7 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle(
-    'github:addRepository',
+    'settings:github:addRepository',
     async (
       _,
       accountId: string,
@@ -114,7 +114,7 @@ app.whenReady().then(() => {
       repositoryHtmlUrl: string
     ) => {
       try {
-        const repository = await settingsService.addRepository(
+        const repository = await settingsService.addGitHubRepository(
           accountId,
           ownerLogin,
           ownerHtmlUrl,
@@ -132,10 +132,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:getRegisteredRepositories',
+    'settings:github:getRepositories',
     async (_, accountId: string, ownerLogin: string) => {
       try {
-        const repositories = await settingsService.getRegisteredRepositories(accountId, ownerLogin)
+        const repositories = await settingsService.getGitHubRepositories(accountId, ownerLogin)
         return { success: true, data: repositories }
       } catch (error) {
         return {
@@ -146,10 +146,10 @@ app.whenReady().then(() => {
     }
   )
   ipcMain.handle(
-    'github:removeRepository',
+    'settings:github:removeRepository',
     async (_, accountId: string, ownerLogin: string, repositoryName: string) => {
       try {
-        await settingsService.removeRepository(accountId, ownerLogin, repositoryName)
+        await settingsService.removeGitHubRepository(accountId, ownerLogin, repositoryName)
         return { success: true }
       } catch (error) {
         return {

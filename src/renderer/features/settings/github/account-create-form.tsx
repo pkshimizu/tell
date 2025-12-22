@@ -33,7 +33,7 @@ export default function GitHubAccountCreateForm() {
     setErrorMessage(null)
 
     try {
-      const result = await window.api.github.createAccount(data.token)
+      const result = await window.api.settings.github.addAccount(data.token)
 
       if (result.success && result.data) {
         setSuccessMessage(
