@@ -28,12 +28,7 @@ export default tseslint.config(
       ...eslintPluginReactHooks.configs.recommended.rules,
       ...eslintPluginReactRefresh.configs.vite.rules,
       'import/no-relative-packages': 'error',
-      'import/no-relative-parent-imports': 'error'
-    }
-  },
-  {
-    files: ['**/*.tsx'],
-    rules: {
+      'import/no-relative-parent-imports': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
