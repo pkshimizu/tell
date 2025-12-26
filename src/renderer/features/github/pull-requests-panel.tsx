@@ -76,7 +76,9 @@ export default function GitHubPullRequestsPanel(props: Props) {
         }
       }
     },
-    [props.state, message]
+    // message全体を依存配列に含めると無限ループが発生するため、setMessageのみを含める
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props.state, message.setMessage]
   )
 
   const handleRefresh = useCallback(() => {
