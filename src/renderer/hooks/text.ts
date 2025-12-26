@@ -1,7 +1,6 @@
 import dayjs, { extend } from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function useText() {
   extend(relativeTime)
   return {

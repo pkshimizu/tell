@@ -9,6 +9,7 @@ import TCircularProgress from '@renderer/components/feedback/circular-progress'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import TIconButton from '@renderer/components/form/icon-button'
 import { IoRefresh } from 'react-icons/io5'
+import useMessage from '@renderer/hooks/message'
 
 type Props = {
   state: 'open' | 'closed'
@@ -46,10 +47,10 @@ function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerReposi
 }
 
 export default function GitHubPullRequestsPanel(props: Props) {
+  const message = useMessage()
   const [pullRequests, setPullRequests] = useState<GitHubApiPullRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const fetchPullRequests = useCallback(
     async (showLoading: boolean = false): Promise<void> => {
@@ -59,15 +60,14 @@ export default function GitHubPullRequestsPanel(props: Props) {
         } else {
           setRefreshing(true)
         }
-        setError(null)
         const result = await window.api.github.getPullRequests(props.state)
         if (result.success && result.data) {
           setPullRequests(result.data as GitHubApiPullRequest[])
         } else {
-          setError(result.error || 'Failed to fetch pull requests')
+          message.setMessage('error', result.error || 'Failed to fetch pull requests')
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+        message.setMessage('error', err instanceof Error ? err.message : 'Unknown error occurred')
       } finally {
         if (showLoading) {
           setLoading(false)
@@ -76,7 +76,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
         }
       }
     },
-    [props.state]
+    [props.state, message]
   )
 
   const handleRefresh = useCallback(() => {
@@ -120,8 +120,6 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
         </TColumn>
-      ) : error ? (
-        <TAlert severity="error">{error}</TAlert>
       ) : pullRequests.length === 0 ? (
         <TAlert severity={'info'}>No pull requests</TAlert>
       ) : (
