@@ -32,12 +32,15 @@ function TListItem(props: { item: Item }) {
     return <>{children}</>
   }
 
+  const iconOnlyStyle = !item.content ? { justifyContent: 'center' } : {}
+  const iconStyle = !item.content ? { minWidth: 'auto' } : {}
+
   if (item.onClick) {
     return (
       <ListItem disablePadding>
         {renderContent(
-          <ListItemButton onClick={item.onClick} selected={!!item.selected}>
-            {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+          <ListItemButton onClick={item.onClick} selected={!!item.selected} sx={iconOnlyStyle}>
+            {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
             {item.content && <ListItemText primary={item.content} />}
           </ListItemButton>
         )}
@@ -48,8 +51,13 @@ function TListItem(props: { item: Item }) {
     return (
       <ListItem disablePadding>
         {renderContent(
-          <ListItemButton to={item.href} selected={!!item.selected} component={Link}>
-            {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+          <ListItemButton
+            to={item.href}
+            selected={!!item.selected}
+            component={Link}
+            sx={iconOnlyStyle}
+          >
+            {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
             {item.content && <ListItemText primary={item.content} />}
           </ListItemButton>
         )}
@@ -57,10 +65,10 @@ function TListItem(props: { item: Item }) {
     )
   }
   return (
-    <ListItem>
+    <ListItem sx={iconOnlyStyle}>
       {renderContent(
         <>
-          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+          {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
           {item.content && <ListItemText primary={item.content} />}
         </>
       )}
