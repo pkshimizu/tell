@@ -8,7 +8,7 @@ export const Route = createRootRoute({
   component: () => (
     <>
       <SideBar />
-      <TColumn ml={20} px={2} py={2}>
+      <TColumn ml={8} px={2} py={2}>
         <Outlet />
       </TColumn>
       <SystemMessage />

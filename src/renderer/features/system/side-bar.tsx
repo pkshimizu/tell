@@ -20,23 +20,23 @@ export default function SideBar() {
   }, [])
 
   return (
-    <TDrawer open={true} variant={'permanent'} width={160}>
+    <TDrawer open={true} variant={'permanent'} width={64}>
       <TColumn height="100%" justify="space-between">
         <TList
           items={[
             {
               id: 'home',
-              content: 'Home',
               icon: <HomeIcon />,
               selected: matchRoute({ to: '/', fuzzy: true }) as boolean,
-              href: '/'
+              href: '/',
+              tooltip: 'Home'
             },
             {
               id: 'setting',
-              content: 'Settings',
               icon: <SettingsIcon />,
               selected: matchRoute({ to: '/settings', fuzzy: true }) as boolean,
-              href: '/settings'
+              href: '/settings',
+              tooltip: 'Settings'
             }
           ]}
         />
