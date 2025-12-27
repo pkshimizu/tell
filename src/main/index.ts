@@ -16,7 +16,7 @@ function createWindow(): void {
     minHeight: 780,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon: icon, // アプリケーションアイコンを設定
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
