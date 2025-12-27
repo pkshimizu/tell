@@ -4,15 +4,26 @@ import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
 import { useCallback, useEffect, useState } from 'react'
-import { GitHubApiPullRequest, GitHubOwner, GitHubRepository } from '@renderer/types/github'
+import {
+  GitHubAccount,
+  GitHubApiPullRequest,
+  GitHubOwner,
+  GitHubRepository
+} from '@renderer/types/github'
 import TCircularProgress from '@renderer/components/feedback/circular-progress'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import TIconButton from '@renderer/components/form/icon-button'
 import { IoRefresh } from 'react-icons/io5'
 import useMessage from '@renderer/hooks/message'
+import TCheckbox from '@renderer/components/form/checkbox'
+import { useForm } from 'react-hook-form'
 
 type Props = {
   state: 'open' | 'closed'
+}
+
+type FilterFormData = {
+  filterMyPRs: boolean
 }
 
 type OwnerRepositories = {
@@ -51,6 +62,15 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const [pullRequests, setPullRequests] = useState<GitHubApiPullRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [accounts, setAccounts] = useState<GitHubAccount[]>([])
+
+  const { control, watch } = useForm<FilterFormData>({
+    defaultValues: {
+      filterMyPRs: true
+    }
+  })
+
+  const filterMyPRs = watch('filterMyPRs')
 
   const fetchPullRequests = useCallback(
     async (showLoading: boolean = false): Promise<void> => {
@@ -85,6 +105,16 @@ export default function GitHubPullRequestsPanel(props: Props) {
     void fetchPullRequests(false)
   }, [fetchPullRequests])
 
+  // GitHubアカウント取得
+  useEffect(() => {
+    ;(async () => {
+      const result = await window.api.settings.github.getAccounts()
+      if (result.success && result.data) {
+        setAccounts(result.data)
+      }
+    })()
+  }, [])
+
   useEffect(() => {
     // 初回読み込み
     void fetchPullRequests(true)
@@ -105,6 +135,16 @@ export default function GitHubPullRequestsPanel(props: Props) {
     }
   }, [fetchPullRequests])
 
+  // 自分がassigneeまたはreviewerに含まれているPRのみをフィルタリング
+  const filteredPullRequests = filterMyPRs
+    ? pullRequests.filter((pr) => {
+        const myLogins = accounts.map((account) => account.login)
+        const isAssignee = pr.assignees.some((assignee) => myLogins.includes(assignee.name))
+        const isReviewer = pr.reviewers.some((reviewer) => myLogins.includes(reviewer.name))
+        return isAssignee || isReviewer
+      })
+    : pullRequests
+
   return (
     <TColumn gap={1}>
       <TRow align="center" justify="space-between">
@@ -112,9 +152,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <GitHubIcon />
           <TText>Open Pull Requests</TText>
         </TRow>
-        <TIconButton onClick={handleRefresh} disabled={refreshing}>
-          {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
-        </TIconButton>
+        <TRow>
+          <TCheckbox name="filterMyPRs" control={control} label="Only my PRs" />
+          <TIconButton onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
+          </TIconButton>
+        </TRow>
       </TRow>
 
       {loading ? (
@@ -122,11 +165,11 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
         </TColumn>
-      ) : pullRequests.length === 0 ? (
+      ) : filteredPullRequests.length === 0 ? (
         <TAlert severity={'info'}>No pull requests</TAlert>
       ) : (
         <>
-          {groupingPullRequests(pullRequests).map((owner) =>
+          {groupingPullRequests(filteredPullRequests).map((owner) =>
             Array.from(owner.repositories.values()).map((repository) => (
               <TColumn key={repository.repository.htmlUrl} gap={1}>
                 <TRow gap={1}>
