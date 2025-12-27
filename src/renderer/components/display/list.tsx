@@ -1,15 +1,16 @@
-import { List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material'
+import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, Tooltip } from '@mui/material'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 interface Item {
   id: string
-  content: ReactNode
+  content?: ReactNode
   icon?: ReactNode
   selected?: boolean
   hide?: boolean
   href?: string
   onClick?: () => void
+  tooltip?: string
 }
 
 interface Props {
@@ -20,30 +21,57 @@ interface Props {
 function TListItem(props: { item: Item }) {
   const item = props.item
 
+  const renderContent = (children: ReactNode) => {
+    if (item.tooltip) {
+      return (
+        <Tooltip title={item.tooltip} placement="right" arrow>
+          <div style={{ display: 'flex', width: '100%' }}>{children}</div>
+        </Tooltip>
+      )
+    }
+    return <>{children}</>
+  }
+
+  const iconOnlyStyle = !item.content ? { justifyContent: 'center' } : {}
+  const iconStyle = !item.content ? { minWidth: 'auto' } : {}
+
   if (item.onClick) {
     return (
       <ListItem disablePadding>
-        <ListItemButton onClick={item.onClick} selected={!!item.selected}>
-          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.content} />
-        </ListItemButton>
+        {renderContent(
+          <ListItemButton onClick={item.onClick} selected={!!item.selected} sx={iconOnlyStyle}>
+            {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
+            {item.content && <ListItemText primary={item.content} />}
+          </ListItemButton>
+        )}
       </ListItem>
     )
   }
   if (item.href) {
     return (
       <ListItem disablePadding>
-        <ListItemButton to={item.href} selected={!!item.selected} component={Link}>
-          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText primary={item.content} />
-        </ListItemButton>
+        {renderContent(
+          <ListItemButton
+            to={item.href}
+            selected={!!item.selected}
+            component={Link}
+            sx={iconOnlyStyle}
+          >
+            {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
+            {item.content && <ListItemText primary={item.content} />}
+          </ListItemButton>
+        )}
       </ListItem>
     )
   }
   return (
-    <ListItem>
-      {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-      <ListItemText primary={item.content} />
+    <ListItem sx={iconOnlyStyle}>
+      {renderContent(
+        <>
+          {item.icon && <ListItemIcon sx={iconStyle}>{item.icon}</ListItemIcon>}
+          {item.content && <ListItemText primary={item.content} />}
+        </>
+      )}
     </ListItem>
   )
 }
