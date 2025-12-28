@@ -7,12 +7,17 @@ import TTextField from '@renderer/components/form/text-field'
 import TButton from '@renderer/components/form/button'
 import useResolver from '@renderer/hooks/resolver'
 import useMessage from '@renderer/hooks/message'
+import { GitHubAccount } from '@renderer/types/github'
 
 interface FormData {
   token: string
 }
 
-export default function GitHubAccountCreateForm() {
+interface Props {
+  onAccountAdded?: (account: GitHubAccount) => void
+}
+
+export default function GitHubAccountCreateForm({ onAccountAdded }: Props) {
   const message = useMessage()
   const resolver = useResolver()
   const [processing, setProcessing] = useState(false)
@@ -38,6 +43,10 @@ export default function GitHubAccountCreateForm() {
           `Successfully registered GitHub account: ${result.data.login} (${result.data.name || 'No name'})`
         )
         reset()
+        // 親コンポーネントに新しいアカウント情報を通知
+        if (onAccountAdded) {
+          onAccountAdded(result.data)
+        }
       } else {
         message.setMessage('error', result.error || 'Failed to register GitHub account')
       }
