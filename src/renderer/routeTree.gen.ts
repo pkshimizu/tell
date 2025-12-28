@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as DebugRouteImport } from './routes/debug'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsGithubRouteImport } from './routes/settings/github'
@@ -24,6 +25,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const DebugRoute = DebugRouteImport.update({
   id: '/debug',
   path: '/debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -49,6 +55,7 @@ const DebugStoreRoute = DebugStoreRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/debug': typeof DebugRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/debug/store': typeof DebugStoreRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/debug': typeof DebugRouteWithChildren
   '/debug/store': typeof DebugStoreRoute
   '/settings/github': typeof SettingsGithubRoute
@@ -65,6 +73,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/debug': typeof DebugRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/debug/store': typeof DebugStoreRoute
@@ -75,16 +84,18 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/debug'
     | '/settings'
     | '/debug/store'
     | '/settings/github'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/debug' | '/debug/store' | '/settings/github' | '/settings'
+  to: '/' | '/$' | '/debug' | '/debug/store' | '/settings/github' | '/settings'
   id:
     | '__root__'
     | '/'
+    | '/$'
     | '/debug'
     | '/settings'
     | '/debug/store'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   DebugRoute: typeof DebugRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
 }
@@ -112,6 +124,13 @@ declare module '@tanstack/react-router' {
       path: '/debug'
       fullPath: '/debug'
       preLoaderRoute: typeof DebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -171,6 +190,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   DebugRoute: DebugRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
 }
