@@ -1,5 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
-import { join } from 'path'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  globalShortcut,
+  nativeImage,
+  NativeImage
+} from 'electron'
+import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '@resources/icon.png?asset'
 import { githubService } from '@main/services/github-service'
@@ -9,6 +17,19 @@ import { initializeStore, getStore } from '@main/store'
 import { createOrShowDebugStoreWindow } from '@main/windows/debug-store'
 
 function createWindow(): void {
+  // Use PNG icon for all platforms - simpler and more reliable
+  let iconPath: string | NativeImage | undefined
+
+  if (is.dev && process.platform === 'darwin') {
+    // macOS in development needs nativeImage
+    const projectRoot = resolve(__dirname, '..', '..')
+    const devIconPath = join(projectRoot, 'build', 'icon.png')
+    iconPath = nativeImage.createFromPath(devIconPath)
+  } else {
+    // Production and other platforms can use the imported icon directly
+    iconPath = icon
+  }
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -17,7 +38,7 @@ function createWindow(): void {
     minHeight: 780,
     show: false,
     autoHideMenuBar: true,
-    icon: icon, // アプリケーションアイコンを設定
+    ...(iconPath && { icon: iconPath }), // アプリケーションアイコンを設定
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -50,7 +71,17 @@ app.whenReady().then(async () => {
   await initializeStore()
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('net.noncore.tell')
+
+  // Set dock icon for macOS in development
+  if (process.platform === 'darwin' && is.dev) {
+    const projectRoot = resolve(__dirname, '..', '..')
+    const iconPath = join(projectRoot, 'build', 'icon.png')
+    const image = nativeImage.createFromPath(iconPath)
+    if (!image.isEmpty()) {
+      app.dock.setIcon(image)
+    }
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
