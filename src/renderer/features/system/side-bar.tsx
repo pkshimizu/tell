@@ -43,7 +43,7 @@ export default function SideBar() {
       items.push({
         id: 'debug',
         icon: <BugIcon />,
-        selected: matchRoute({ to: '/debug', fuzzy: true }) as boolean,
+        selected: matchRoute({ to: '/debug/store', fuzzy: true }) as boolean,
         href: '/debug/store',
         tooltip: 'Debug Store'
       })
