@@ -4,6 +4,7 @@ import TButton from '@renderer/components/form/button'
 import TText from '@renderer/components/display/text'
 import TCard from '@renderer/components/surface/card'
 import useMessage from '@renderer/hooks/message'
+import TBox from '@renderer/components/display/box'
 
 export default function DebugStoreViewer() {
   const [storeData, setStoreData] = useState<string | null>(null)
@@ -52,18 +53,9 @@ export default function DebugStoreViewer() {
           {isLoading ? (
             <TText>Loading...</TText>
           ) : (
-            <pre
-              style={{
-                backgroundColor: '#f5f5f5',
-                padding: '16px',
-                borderRadius: '4px',
-                overflow: 'auto',
-                maxHeight: '600px',
-                fontSize: '14px'
-              }}
-            >
-              {storeData}
-            </pre>
+            <TBox backgroundColor={'boxBackground'} padding={2}>
+              <TText whiteSpace={'pre'}>{storeData ?? ''}</TText>
+            </TBox>
           )}
         </TColumn>
       </TCard>
