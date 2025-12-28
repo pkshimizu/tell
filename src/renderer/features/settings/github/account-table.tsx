@@ -3,26 +3,20 @@ import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import TLink from '@renderer/components/navigation/link'
 import { TColumn } from '@renderer/components/layout/flex-box'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { GitHubAccount } from '@renderer/types/github'
 import useText from '@renderer/hooks/text'
 import TButton from '@renderer/components/form/button'
 import GitHubRepositorySelectDialog from './repository-select-dialog'
 
-export default function GitHubAccountTable() {
-  const [accounts, setAccounts] = useState<GitHubAccount[]>([])
+interface Props {
+  accounts: GitHubAccount[]
+}
+
+export default function GitHubAccountTable({ accounts }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
   const text = useText()
-
-  useEffect(() => {
-    ;(async () => {
-      const result = await window.api.settings.github.getAccounts()
-      if (result.success && result.data) {
-        setAccounts(result.data)
-      }
-    })()
-  }, [])
 
   const handleOpenDialog = (accountId: number) => {
     setSelectedAccountId(accountId)
