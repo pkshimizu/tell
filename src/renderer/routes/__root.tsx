@@ -12,7 +12,7 @@ export const Route = createRootRoute({
         <Outlet />
       </TColumn>
       <SystemMessage />
-      <TanStackRouterDevtools />
+      {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
     </>
   )
 })
