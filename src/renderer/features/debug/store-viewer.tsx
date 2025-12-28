@@ -1,0 +1,83 @@
+import { useState, useEffect } from 'react'
+import { TColumn, TRow } from '@renderer/components/layout/flex-box'
+import TButton from '@renderer/components/form/button'
+import TText from '@renderer/components/display/text'
+import TCard from '@renderer/components/surface/card'
+import useMessage from '@renderer/hooks/message'
+import type { StoreSchema } from '@main/models/store/settings/github'
+
+export default function DebugStoreViewer() {
+  const [storeData, setStoreData] = useState<StoreSchema | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const message = useMessage()
+
+  // ストアデータを取得
+  const loadStoreData = async () => {
+    setIsLoading(true)
+    try {
+      const result = await window.api.debug.store.getAll()
+      if (result.success && result.data) {
+        setStoreData(result.data)
+        message.setMessage('success', 'Store data loaded successfully')
+      } else {
+        message.setMessage('error', result.error || 'Failed to load store data')
+      }
+    } catch (error) {
+      message.setMessage('error', 'Failed to load store data')
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 初回読み込み
+  useEffect(() => {
+    loadStoreData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <TColumn gap={2} fullWidth>
+      {/* ツールバー */}
+      <TCard>
+        <TRow gap={2}>
+          <TButton onClick={loadStoreData} disabled={isLoading} variant="outlined">
+            Reload
+          </TButton>
+        </TRow>
+      </TCard>
+
+      {/* データ表示エリア */}
+      <TCard>
+        <TColumn gap={2} fullWidth>
+          <TText variant="subtitle">Store Data</TText>
+          {isLoading ? (
+            <TText>Loading...</TText>
+          ) : (
+            <pre
+              style={{
+                backgroundColor: '#f5f5f5',
+                padding: '16px',
+                borderRadius: '4px',
+                overflow: 'auto',
+                maxHeight: '600px',
+                fontSize: '14px'
+              }}
+            >
+              {JSON.stringify(storeData, null, 2)}
+            </pre>
+          )}
+        </TColumn>
+      </TCard>
+
+      {/* 使用方法 */}
+      <TCard>
+        <TColumn gap={1}>
+          <TText variant="subtitle">Usage</TText>
+          <TText variant="caption">• Press Cmd/Ctrl+Shift+D to open this window</TText>
+          <TText variant="caption">• Click &quot;Reload&quot; to refresh the store data</TText>
+        </TColumn>
+      </TCard>
+    </TColumn>
+  )
+}

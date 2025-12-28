@@ -5,6 +5,7 @@ import type {
   GitHubApiPullRequest,
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
+import type { StoreSchema } from '@main/models/store/settings/github'
 
 interface GitHubAPI {
   getOwners: (accountId: number) => Promise<{
@@ -72,12 +73,23 @@ interface AppAPI {
   getVersion: () => Promise<string>
 }
 
+interface DebugStoreAPI {
+  getAll: () => Promise<{
+    success: boolean
+    data?: StoreSchema
+    error?: string
+  }>
+}
+
 interface API {
   github: GitHubAPI
   settings: {
     github: SettingsGitHubAPI
   }
   app: AppAPI
+  debug: {
+    store: DebugStoreAPI
+  }
 }
 
 declare global {

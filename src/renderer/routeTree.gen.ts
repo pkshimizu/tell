@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as DebugRouteImport } from './routes/debug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsGithubRouteImport } from './routes/settings/github'
+import { Route as DebugStoreRouteImport } from './routes/debug/store'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugRoute = DebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -34,35 +41,60 @@ const SettingsGithubRoute = SettingsGithubRouteImport.update({
   path: '/github',
   getParentRoute: () => SettingsRoute,
 } as any)
+const DebugStoreRoute = DebugStoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => DebugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/debug': typeof DebugRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
+  '/debug/store': typeof DebugStoreRoute
   '/settings/github': typeof SettingsGithubRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/debug': typeof DebugRouteWithChildren
+  '/debug/store': typeof DebugStoreRoute
   '/settings/github': typeof SettingsGithubRoute
   '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/debug': typeof DebugRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
+  '/debug/store': typeof DebugStoreRoute
   '/settings/github': typeof SettingsGithubRoute
   '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/settings/github' | '/settings/'
+  fullPaths:
+    | '/'
+    | '/debug'
+    | '/settings'
+    | '/debug/store'
+    | '/settings/github'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings/github' | '/settings'
-  id: '__root__' | '/' | '/settings' | '/settings/github' | '/settings/'
+  to: '/' | '/debug' | '/debug/store' | '/settings/github' | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/debug'
+    | '/settings'
+    | '/debug/store'
+    | '/settings/github'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DebugRoute: typeof DebugRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
 }
 
@@ -73,6 +105,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -96,8 +135,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsGithubRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/debug/store': {
+      id: '/debug/store'
+      path: '/store'
+      fullPath: '/debug/store'
+      preLoaderRoute: typeof DebugStoreRouteImport
+      parentRoute: typeof DebugRoute
+    }
   }
 }
+
+interface DebugRouteChildren {
+  DebugStoreRoute: typeof DebugStoreRoute
+}
+
+const DebugRouteChildren: DebugRouteChildren = {
+  DebugStoreRoute: DebugStoreRoute,
+}
+
+const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
 
 interface SettingsRouteChildren {
   SettingsGithubRoute: typeof SettingsGithubRoute
@@ -115,6 +171,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DebugRoute: DebugRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
 }
 export const routeTree = rootRouteImport

@@ -1,11 +1,12 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '@resources/icon.png?asset'
 import { githubService } from '@main/services/github-service'
 import { githubStoreRepository } from '@main/repositories/store/settings/github-repository'
 import { settingsService } from '@main/services/settings-service'
-import { initializeStore } from '@main/store'
+import { initializeStore, getStore } from '@main/store'
+import { createOrShowDebugStoreWindow } from '@main/windows/debug-store'
 
 function createWindow(): void {
   // Create the browser window.
@@ -179,6 +180,28 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:getVersion', () => {
     return app.getVersion()
   })
+
+  // Debug Store IPC handlers (開発モードのみ)
+  if (is.dev) {
+    // electron-storeの全データを取得
+    ipcMain.handle('debug:store:getAll', async () => {
+      try {
+        const store = getStore()
+        const data = store.store
+        return { success: true, data }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    })
+
+    // キーボードショートカットの登録 (Cmd/Ctrl+Shift+D)
+    globalShortcut.register('CommandOrControl+Shift+D', () => {
+      createOrShowDebugStoreWindow()
+    })
+  }
 
   createWindow()
 

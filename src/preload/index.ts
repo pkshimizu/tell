@@ -45,6 +45,12 @@ const api = {
   },
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion')
+  },
+  // Debug Store API (開発モードのみ)
+  debug: {
+    store: {
+      getAll: () => ipcRenderer.invoke('debug:store:getAll')
+    }
   }
 }
 
