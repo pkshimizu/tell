@@ -3,13 +3,18 @@ import ReactDOM from 'react-dom/client'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { theme } from '@renderer/theme'
-import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { createRouter, RouterProvider, createHashHistory } from '@tanstack/react-router'
 import { routeTree } from '@renderer/routeTree.gen'
 import '@renderer/main.css'
 
+// Create hash history for Electron app (works with file:// protocol)
+const hashHistory = createHashHistory()
+
 // Create a new router instance
 const router = createRouter({
-  routeTree
+  routeTree,
+  history: hashHistory,
+  defaultPreload: 'intent'
 })
 
 // Register the router instance for type safety
