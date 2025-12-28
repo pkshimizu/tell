@@ -49,7 +49,8 @@ const api = {
   // Debug Store API (開発モードのみ)
   debug: {
     store: {
-      getAll: () => ipcRenderer.invoke('debug:store:getAll')
+      getAll: () => ipcRenderer.invoke('debug:store:getAll'),
+      openConfig: () => ipcRenderer.invoke('debug:store:openConfig')
     }
   }
 }

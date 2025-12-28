@@ -78,6 +78,10 @@ interface DebugStoreAPI {
     data?: string // JSON文字列として受け取る
     error?: string
   }>
+  openConfig: () => Promise<{
+    success: boolean
+    error?: string
+  }>
 }
 
 interface API {

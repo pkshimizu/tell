@@ -29,6 +29,19 @@ export default function DebugStoreViewer() {
     }
   }
 
+  // config.jsonをエディタで開く
+  const handleOpenConfig = async () => {
+    try {
+      const result = await window.api.debug.store.openConfig()
+      if (!result.success) {
+        message.setMessage('error', result.error || 'Failed to open config.json')
+      }
+    } catch (error) {
+      message.setMessage('error', 'Failed to open config.json')
+      console.error(error)
+    }
+  }
+
   // 初回読み込み
   useEffect(() => {
     loadStoreData()
@@ -42,6 +55,9 @@ export default function DebugStoreViewer() {
         <TRow gap={2}>
           <TButton onClick={loadStoreData} disabled={isLoading} variant="outlined">
             Reload
+          </TButton>
+          <TButton onClick={handleOpenConfig} variant="outlined">
+            Open config.json
           </TButton>
         </TRow>
       </TCard>
@@ -66,6 +82,9 @@ export default function DebugStoreViewer() {
           <TText variant="subtitle">Usage</TText>
           <TText variant="caption">• Press Cmd/Ctrl+Shift+D to open this window</TText>
           <TText variant="caption">• Click &quot;Reload&quot; to refresh the store data</TText>
+          <TText variant="caption">
+            • Click &quot;Open config.json&quot; to edit the store file directly
+          </TText>
         </TColumn>
       </TCard>
     </TColumn>

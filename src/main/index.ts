@@ -199,6 +199,23 @@ app.whenReady().then(async () => {
       }
     })
 
+    // electron-storeのconfig.jsonファイルを開く
+    ipcMain.handle('debug:store:openConfig', async () => {
+      try {
+        const store = getStore()
+        // electron-storeのpathプロパティでconfig.jsonのパスを取得
+        const configPath = store.path
+        // デフォルトのアプリケーションで開く
+        await shell.openPath(configPath)
+        return { success: true }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    })
+
     // キーボードショートカットの登録 (Cmd/Ctrl+Shift+D)
     globalShortcut.register('CommandOrControl+Shift+D', () => {
       createOrShowDebugStoreWindow()
