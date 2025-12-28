@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
 import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TButton from '@renderer/components/form/button'
 import TText from '@renderer/components/display/text'
+import TTextField from '@renderer/components/form/text-field'
 import TCard from '@renderer/components/surface/card'
 import useMessage from '@renderer/hooks/message'
-import TBox from '@renderer/components/display/box'
+
+interface FormData {
+  storeData: string
+}
 
 export default function DebugStoreViewer() {
-  const [storeData, setStoreData] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const message = useMessage()
+  const { register, setValue } = useForm<FormData>({
+    defaultValues: {
+      storeData: ''
+    }
+  })
 
   // ストアデータを取得
   const loadStoreData = async () => {
@@ -17,7 +26,7 @@ export default function DebugStoreViewer() {
     try {
       const result = await window.api.debug.store.getAll()
       if (result.success && result.data) {
-        setStoreData(result.data)
+        setValue('storeData', result.data)
       } else {
         message.setMessage('error', result.error || 'Failed to load store data')
       }
@@ -69,9 +78,7 @@ export default function DebugStoreViewer() {
           {isLoading ? (
             <TText>Loading...</TText>
           ) : (
-            <TBox backgroundColor={'boxBackground'} padding={2}>
-              <TText whiteSpace={'pre'}>{storeData ?? ''}</TText>
-            </TBox>
+            <TTextField register={register('storeData')} readonly fullWidth multiline rows={20} />
           )}
         </TColumn>
       </TCard>
