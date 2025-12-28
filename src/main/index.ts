@@ -188,7 +188,9 @@ app.whenReady().then(async () => {
       try {
         const store = getStore()
         const data = store.store
-        return { success: true, data }
+        // JSON文字列に変換してrendererに渡す
+        const jsonString = JSON.stringify(data, null, 2)
+        return { success: true, data: jsonString }
       } catch (error) {
         return {
           success: false,

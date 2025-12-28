@@ -4,10 +4,9 @@ import TButton from '@renderer/components/form/button'
 import TText from '@renderer/components/display/text'
 import TCard from '@renderer/components/surface/card'
 import useMessage from '@renderer/hooks/message'
-import type { StoreSchema } from '@main/models/store/settings/github'
 
 export default function DebugStoreViewer() {
-  const [storeData, setStoreData] = useState<StoreSchema | null>(null)
+  const [storeData, setStoreData] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const message = useMessage()
 
@@ -18,7 +17,6 @@ export default function DebugStoreViewer() {
       const result = await window.api.debug.store.getAll()
       if (result.success && result.data) {
         setStoreData(result.data)
-        message.setMessage('success', 'Store data loaded successfully')
       } else {
         message.setMessage('error', result.error || 'Failed to load store data')
       }
@@ -64,7 +62,7 @@ export default function DebugStoreViewer() {
                 fontSize: '14px'
               }}
             >
-              {JSON.stringify(storeData, null, 2)}
+              {storeData}
             </pre>
           )}
         </TColumn>
