@@ -72,12 +72,27 @@ interface AppAPI {
   getVersion: () => Promise<string>
 }
 
+interface DebugStoreAPI {
+  getAll: () => Promise<{
+    success: boolean
+    data?: string // JSON文字列として受け取る
+    error?: string
+  }>
+  openConfig: () => Promise<{
+    success: boolean
+    error?: string
+  }>
+}
+
 interface API {
   github: GitHubAPI
   settings: {
     github: SettingsGitHubAPI
   }
   app: AppAPI
+  debug: {
+    store: DebugStoreAPI
+  }
 }
 
 declare global {
