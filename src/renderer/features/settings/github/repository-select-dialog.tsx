@@ -134,7 +134,7 @@ export default function GitHubRepositorySelectDialog(props: Props) {
 
   return (
     <TDialog open={props.open} onClose={props.onClose} title="Select Repository" size="md">
-      <TColumn gap={2} height={480}>
+      <TColumn gap={2} height={500}>
         <TFormItem label="Organization">
           <TSelect
             control={control}
@@ -146,10 +146,20 @@ export default function GitHubRepositorySelectDialog(props: Props) {
           />
         </TFormItem>
 
-        {loading && <TCircularProgress size={40} />}
+        {loading && (
+          <TColumn height={420} justify="center" align="center">
+            <TCircularProgress size={40} />
+          </TColumn>
+        )}
+
+        {!loading && selectedOwner && repositories.length === 0 && (
+          <TColumn height={420} justify="center" align="center">
+            <TText>No repositories found</TText>
+          </TColumn>
+        )}
 
         {!loading && repositories.length > 0 && (
-          <TColumn gap={1}>
+          <TColumn gap={1} height={420}>
             <TText variant="caption">Repositories</TText>
             <TTextField register={register('filterKeyword')} />
             <TList
@@ -171,8 +181,14 @@ export default function GitHubRepositorySelectDialog(props: Props) {
                   )
                 }
               })}
-              height={460}
+              height={350}
             />
+          </TColumn>
+        )}
+
+        {!loading && !selectedOwner && (
+          <TColumn height={420} justify="center" align="center">
+            <TText>Select an organization to view repositories</TText>
           </TColumn>
         )}
       </TColumn>

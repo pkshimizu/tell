@@ -46,7 +46,7 @@ export default function TDialog(props: Props) {
           </Box>
         </DialogTitle>
       )}
-      <DialogContent>{props.children}</DialogContent>
+      <DialogContent sx={{ overflow: 'hidden', padding: 2 }}>{props.children}</DialogContent>
       {props.actions && <DialogActions>{props.actions}</DialogActions>}
     </Dialog>
   )
