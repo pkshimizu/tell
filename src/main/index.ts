@@ -5,7 +5,8 @@ import {
   ipcMain,
   globalShortcut,
   nativeImage,
-  NativeImage
+  NativeImage,
+  Menu
 } from 'electron'
 import { join, resolve } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -63,12 +64,47 @@ function createWindow(): void {
   }
 }
 
+function setupApplicationMenu(): void {
+  if (process.platform === 'darwin') {
+    // macOS requires a menu bar, so create a minimal one with only app menu
+    const appName = 'tell'
+    const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: appName,
+        submenu: [
+          {
+            label: 'About ' + appName,
+            role: 'about'
+          },
+          { type: 'separator' },
+          {
+            label: 'Quit',
+            accelerator: 'Command+Q',
+            click: () => {
+              app.quit()
+            }
+          }
+        ]
+      }
+    ]
+
+    const menu = Menu.buildFromTemplate(template)
+    Menu.setApplicationMenu(menu)
+  } else {
+    // Windows and Linux - remove menu completely
+    Menu.setApplicationMenu(null)
+  }
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   // Initialize electron-store (ESM package requires dynamic import)
   await initializeStore()
+
+  // Set up custom application menu
+  setupApplicationMenu()
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('net.noncore.tell')
