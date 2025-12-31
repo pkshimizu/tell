@@ -67,13 +67,12 @@ function createWindow(): void {
 function setupApplicationMenu(): void {
   if (process.platform === 'darwin') {
     // macOS requires a menu bar, so create a minimal one with only app menu
-    const appName = 'tell'
     const template: Electron.MenuItemConstructorOptions[] = [
       {
-        label: appName,
+        label: app.name,
         submenu: [
           {
-            label: 'About ' + appName,
+            label: 'About ' + app.name,
             role: 'about'
           },
           { type: 'separator' },
