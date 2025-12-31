@@ -9,7 +9,13 @@ out
 *.iml
 .claude
 .vscode
-build
+
+# Build directory - ignore all except essential files
+build/*
+!build/icon.png
+!build/icon.ico
+!build/icon.icns
+!build/entitlements.mac.plist
 
 # Database
 data/
