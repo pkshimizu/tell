@@ -12,13 +12,15 @@ files:
 asarUnpack:
   - resources/**
 win:
-  icon: build/icon.png
+  icon: build/icon.ico
   executableName: tell
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
 mac:
   icon: build/icon.png
   target:
