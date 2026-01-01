@@ -6,10 +6,10 @@ import { TColumn } from '@renderer/components/layout/flex-box'
 import HomeIcon from '@renderer/components/display/icons/home'
 import SettingsIcon from '@renderer/components/display/icons/settings'
 import BugIcon from '@renderer/components/display/icons/bug'
-import { useMatchRoute } from '@tanstack/react-router'
+import { useLocation } from '@tanstack/react-router'
 
 export default function SideBar() {
-  const matchRoute = useMatchRoute()
+  const location = useLocation()
   const [version, setVersion] = useState<string>('')
 
   useEffect(() => {
@@ -21,18 +21,20 @@ export default function SideBar() {
   }, [])
 
   const menuItems = useMemo(() => {
+    const pathname = location.pathname
+
     const items = [
       {
         id: 'home',
         icon: <HomeIcon />,
-        selected: matchRoute({ to: '/', fuzzy: true }) as boolean,
+        selected: pathname === '/',
         href: '/',
         tooltip: 'Home'
       },
       {
         id: 'setting',
         icon: <SettingsIcon />,
-        selected: matchRoute({ to: '/settings', fuzzy: true }) as boolean,
+        selected: pathname.startsWith('/settings'),
         href: '/settings',
         tooltip: 'Settings'
       }
@@ -43,14 +45,14 @@ export default function SideBar() {
       items.push({
         id: 'debug',
         icon: <BugIcon />,
-        selected: matchRoute({ to: '/debug/store', fuzzy: true }) as boolean,
+        selected: pathname.startsWith('/debug'),
         href: '/debug/store',
         tooltip: 'Debug Store'
       })
     }
 
     return items
-  }, [matchRoute])
+  }, [location.pathname])
 
   return (
     <TDrawer open={true} variant={'permanent'} width={64}>
