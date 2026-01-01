@@ -135,13 +135,14 @@ export default function GitHubPullRequestsPanel(props: Props) {
     }
   }, [fetchPullRequests])
 
-  // 自分がassigneeまたはreviewerに含まれているPRのみをフィルタリング
+  // 自分が作成者、assignee、またはreviewerに含まれているPRのみをフィルタリング
   const filteredPullRequests = filterMyPRs
     ? pullRequests.filter((pr) => {
         const myLogins = accounts.map((account) => account.login)
+        const isAuthor = myLogins.includes(pr.author.name)
         const isAssignee = pr.assignees.some((assignee) => myLogins.includes(assignee.name))
         const isReviewer = pr.reviewers.some((reviewer) => myLogins.includes(reviewer.name))
-        return isAssignee || isReviewer
+        return isAuthor || isAssignee || isReviewer
       })
     : pullRequests
 
