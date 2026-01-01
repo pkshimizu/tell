@@ -55,34 +55,47 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
             </TRow>
           </TColumn>
         </TGridItem>
-        <TColumn>
-          <TText variant={'caption'}>Assignees</TText>
-          {pullRequest.assignees.map((assignee) => (
-            <TLink key={assignee.name} href={assignee.htmlUrl}>
-              <TRow align={'center'} gap={1}>
-                <TAvatar alt={assignee.name} url={assignee.avatarUrl} size={24} />
-                <TText>{assignee.name}</TText>
-              </TRow>
-            </TLink>
-          ))}
+        <TColumn gap={1}>
+          <TText variant={'caption'}>Created by</TText>
+          <TLink href={pullRequest.author.htmlUrl}>
+            <TRow align={'center'} gap={1}>
+              <TAvatar alt={pullRequest.author.name} url={pullRequest.author.avatarUrl} size={24} />
+              <TText>{pullRequest.author.name}</TText>
+            </TRow>
+          </TLink>
+          {pullRequest.assignees.length > 0 && (
+            <TColumn gap={1}>
+              <TText variant={'caption'}>Assignees</TText>
+              {pullRequest.assignees.map((assignee) => (
+                <TLink key={assignee.name} href={assignee.htmlUrl}>
+                  <TRow align={'center'} gap={1}>
+                    <TAvatar alt={assignee.name} url={assignee.avatarUrl} size={24} />
+                    <TText>{assignee.name}</TText>
+                  </TRow>
+                </TLink>
+              ))}
+            </TColumn>
+          )}
         </TColumn>
         <TColumn gap={1}>
           <TText variant={'caption'}>Reviewers</TText>
           <TGrid columns={['1fr', '64px']} rowGap={1}>
-            {pullRequest.reviewers.map((reviewer) => (
-              <TGridContents key={reviewer.name}>
-                <TLink href={reviewer.htmlUrl}>
+            {pullRequest.reviewers
+              .filter((reviewer) => reviewer.name !== pullRequest.author.name)
+              .map((reviewer) => (
+                <TGridContents key={reviewer.name}>
+                  <TLink href={reviewer.htmlUrl}>
+                    <TRow align={'center'} gap={1}>
+                      <TAvatar alt={reviewer.name} url={reviewer.avatarUrl} size={24} />
+                      <TText>{reviewer.name}</TText>
+                    </TRow>
+                  </TLink>
                   <TRow align={'center'} gap={1}>
-                    <TAvatar alt={reviewer.name} url={reviewer.avatarUrl} size={24} />
-                    <TText>{reviewer.name}</TText>
+                    <ReviewStatusIcon status={reviewer.status} />
+                    <TText>{reviewer.comments}</TText>
                   </TRow>
-                </TLink>
-                <TRow align={'center'} gap={1}>
-                  <ReviewStatusIcon status={reviewer.status} />
-                  <TText>{reviewer.comments}</TText>
-                </TRow>
-              </TGridContents>
-            ))}
+                </TGridContents>
+              ))}
           </TGrid>
         </TColumn>
       </TGrid>

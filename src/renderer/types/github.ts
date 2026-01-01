@@ -25,6 +25,12 @@ export interface GitHubApiPullRequestAssignee {
   avatarUrl: string
 }
 
+export interface GitHubApiPullRequestAuthor {
+  name: string
+  htmlUrl: string
+  avatarUrl: string
+}
+
 export type GitHubApiPullRequestReviewStatus =
   | 'approved'
   | 'changes_requested'
@@ -44,6 +50,7 @@ export interface GitHubApiPullRequest {
   id: string
   owner: GitHubOwner
   repository: GitHubRepository
+  author: GitHubApiPullRequestAuthor
   assignees: GitHubApiPullRequestAssignee[]
   reviewers: GitHubApiPullRequestReviewer[]
   title: string

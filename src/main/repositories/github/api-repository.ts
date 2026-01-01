@@ -4,6 +4,7 @@ import {
   GitHubApiRepository as GitHubApiRepositoryModel,
   GitHubApiPullRequest,
   GitHubApiPullRequestAssignee,
+  GitHubApiPullRequestAuthor,
   GitHubApiPullRequestReviewer,
   GitHubPullRequestState,
   GitHubApiPullRequestStatus
@@ -284,6 +285,13 @@ export class GitHubApiRepository {
           reviews = (await reviewsResponse.json()) as GitHubReviewResponse[]
         }
 
+        // PR作成者情報を変換
+        const author: GitHubApiPullRequestAuthor = {
+          name: pull.user.login,
+          htmlUrl: pull.user.html_url,
+          avatarUrl: pull.user.avatar_url
+        }
+
         // アサイニー情報を変換
         const assignees: GitHubApiPullRequestAssignee[] = pull.assignees.map((assignee) => ({
           name: assignee.login,
@@ -365,6 +373,7 @@ export class GitHubApiRepository {
             name: pull.base.repo.name,
             htmlUrl: pull.base.repo.html_url
           },
+          author,
           assignees,
           reviewers,
           title: pull.title,
