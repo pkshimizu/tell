@@ -66,16 +66,31 @@ export class GitHubService {
    */
   async getPullRequests(state: GitHubPullRequestState): Promise<GitHubApiPullRequest[]> {
     const allRepositories = githubStoreRepository.getAllRepositories()
+
+    if (allRepositories.length === 0) {
+      return []
+    }
+
+    // 各リポジトリのプルリクエスト取得を並列実行
+    const promises = allRepositories.map(({ account, owner, repository }) =>
+      githubApiRepository
+        .getPullRequests(account.personalAccessToken, owner.login, repository.name, state)
+        .then((prs) => ({
+          status: 'fulfilled' as const,
+          pullRequests: prs
+        }))
+        .catch(() => ({
+          status: 'rejected' as const,
+          pullRequests: [] as GitHubApiPullRequest[]
+        }))
+    )
+
+    const results = await Promise.all(promises)
     const pullRequests: GitHubApiPullRequest[] = []
 
-    for (const { account, owner, repository } of allRepositories) {
-      const prs = await githubApiRepository.getPullRequests(
-        account.personalAccessToken,
-        owner.login,
-        repository.name,
-        state
-      )
-      pullRequests.push(...prs)
+    // 結果を処理（エラーが発生したリポジトリは空配列として扱う）
+    for (const result of results) {
+      pullRequests.push(...result.pullRequests)
     }
 
     return pullRequests
