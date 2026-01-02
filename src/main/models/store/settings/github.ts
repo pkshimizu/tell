@@ -1,3 +1,5 @@
+import type { WindowState } from '../window'
+
 /**
  * electron-storeで管理するGitHubリポジトリ情報
  */
@@ -44,4 +46,5 @@ export interface StoreSchema {
   settings: {
     github: StoreSettingsGitHub
   }
+  window?: WindowState
 }

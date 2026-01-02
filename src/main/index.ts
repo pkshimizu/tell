@@ -16,6 +16,9 @@ import { githubStoreRepository } from '@main/repositories/store/settings/github-
 import { settingsService } from '@main/services/settings-service'
 import { initializeStore, getStore } from '@main/store'
 import { createOrShowDebugStoreWindow } from '@main/windows/debug-store'
+import { WindowStateService } from '@main/services/window-state-service'
+
+let windowStateService: WindowStateService | null = null
 
 function createWindow(): void {
   // Use PNG icon for all platforms - simpler and more reliable
@@ -31,10 +34,20 @@ function createWindow(): void {
     iconPath = icon
   }
 
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  // Get saved window state
+  const windowState = windowStateService?.getWindowState() || {
     width: 900,
     height: 780,
+    isMaximized: false,
+    isFullScreen: false
+  }
+
+  // Create the browser window.
+  const mainWindow = new BrowserWindow({
+    x: windowState.x,
+    y: windowState.y,
+    width: windowState.width,
+    height: windowState.height,
     minWidth: 900,
     minHeight: 780,
     show: false,
@@ -45,6 +58,17 @@ function createWindow(): void {
       sandbox: false
     }
   })
+
+  // Restore maximized or fullscreen state
+  if (windowState.isMaximized) {
+    mainWindow.maximize()
+  }
+  if (windowState.isFullScreen) {
+    mainWindow.setFullScreen(true)
+  }
+
+  // Start managing window state
+  windowStateService?.manage(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -101,6 +125,10 @@ function setupApplicationMenu(): void {
 app.whenReady().then(async () => {
   // Initialize electron-store (ESM package requires dynamic import)
   await initializeStore()
+
+  // Initialize window state service
+  const store = getStore()
+  windowStateService = new WindowStateService(store)
 
   // Set up custom application menu
   setupApplicationMenu()
