@@ -1,0 +1,104 @@
+/**
+ * Dark Theme Variables
+ * ダークモード用のカラー変数定義
+ */
+
+[data-theme='dark'] {
+  /* Primary Colors */
+  --color-primary: #90caf9;
+  --color-primary-light: #bbdefb;
+  --color-primary-dark: #42a5f5;
+
+  /* Background Colors */
+  --color-background: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface-variant: #2c2c2c;
+
+  /* Text Colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b3b3b3;
+  --color-text-disabled: #666666;
+
+  /* Border Colors */
+  --color-border: #3c3c3c;
+  --color-divider: #2a2a2a;
+
+  /* Status Colors */
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-info: #2196f3;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.6);
+}
+
+/* ダークモード時の追加スタイリング */
+[data-theme='dark'] body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .MuiPaper-root {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .MuiDrawer-paper {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme='dark'] .MuiAppBar-root {
+  background-color: var(--color-surface-variant);
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .MuiButton-root {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] .MuiIconButton-root {
+  color: var(--color-text-secondary);
+}
+
+[data-theme='dark'] .MuiIconButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* コード表示エリアのダークテーマ対応 */
+[data-theme='dark'] pre,
+[data-theme='dark'] code {
+  background-color: var(--color-surface-variant);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+/* リンクのダークテーマ対応 */
+[data-theme='dark'] a {
+  color: var(--color-primary);
+}
+
+[data-theme='dark'] a:hover {
+  color: var(--color-primary-light);
+}
+
+/* スクロールバーのダークテーマ対応 */
+[data-theme='dark'] ::-webkit-scrollbar {
+  background-color: var(--color-background);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background-color: var(--color-surface);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background-color: var(--color-surface-variant);
+  border: 2px solid var(--color-surface);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border);
+}
