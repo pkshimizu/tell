@@ -46,6 +46,10 @@ const api = {
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion')
   },
+  theme: {
+    get: () => ipcRenderer.invoke('theme:get'),
+    set: (mode: 'light' | 'dark' | 'system') => ipcRenderer.invoke('theme:set', mode)
+  },
   // Debug Store API (開発モードのみ)
   debug: {
     store: {

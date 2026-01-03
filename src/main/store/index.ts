@@ -22,6 +22,9 @@ export async function initializeStore(): Promise<Store<StoreSchema>> {
       settings: {
         github: {
           accounts: []
+        },
+        theme: {
+          mode: 'system' // デフォルトはシステム連動
         }
       }
     }

@@ -275,6 +275,29 @@ app.whenReady().then(async () => {
     return app.getVersion()
   })
 
+  // Theme IPC handlers
+  ipcMain.handle('theme:get', async () => {
+    try {
+      const store = getStore()
+      const theme = store.get('settings.theme.mode', 'system')
+      return theme
+    } catch (error) {
+      console.error('Failed to get theme:', error)
+      return 'system'
+    }
+  })
+
+  ipcMain.handle('theme:set', async (_, mode: 'light' | 'dark' | 'system') => {
+    try {
+      const store = getStore()
+      store.set('settings.theme.mode', mode)
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to set theme:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
   // Debug Store IPC handlers (開発モードのみ)
   if (is.dev) {
     // electron-storeの全データを取得
