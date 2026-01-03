@@ -1,8 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import { theme } from '@renderer/theme'
+import { ThemeProvider } from '@renderer/contexts/theme-context'
 import { createRouter, RouterProvider, createHashHistory } from '@tanstack/react-router'
 import { routeTree } from '@renderer/routeTree.gen'
 import '@renderer/main.css'
@@ -26,7 +25,7 @@ declare module '@tanstack/react-router' {
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
+    <ThemeProvider>
       <CssBaseline />
       <RouterProvider router={router} />
     </ThemeProvider>

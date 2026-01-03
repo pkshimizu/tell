@@ -6,6 +6,8 @@ import type {
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
 
+type ThemeMode = 'light' | 'dark' | 'system'
+
 interface GitHubAPI {
   getOwners: (accountId: number) => Promise<{
     success: boolean
@@ -72,6 +74,14 @@ interface AppAPI {
   getVersion: () => Promise<string>
 }
 
+interface ThemeAPI {
+  get: () => Promise<ThemeMode>
+  set: (mode: ThemeMode) => Promise<{
+    success: boolean
+    error?: string
+  }>
+}
+
 interface DebugStoreAPI {
   getAll: () => Promise<{
     success: boolean
@@ -90,6 +100,7 @@ interface API {
     github: SettingsGitHubAPI
   }
   app: AppAPI
+  theme: ThemeAPI
   debug: {
     store: DebugStoreAPI
   }
