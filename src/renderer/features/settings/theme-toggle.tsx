@@ -55,19 +55,19 @@ export function ThemeToggle(): JSX.Element {
   }, [mode, setValue])
 
   const items = [
-    { value: 0, label: 'ライトモード' },
-    { value: 1, label: 'ダークモード' },
-    { value: 2, label: 'システム設定に従う' }
+    { value: 0, label: 'Light Mode' },
+    { value: 1, label: 'Dark Mode' },
+    { value: 2, label: 'System' }
   ]
 
   const getHelpText = (): string => {
     switch (mode) {
       case 'system':
-        return 'システムの設定に基づいてテーマが自動的に切り替わります'
+        return 'Automatically switch theme based on system settings'
       case 'light':
-        return '明るい背景色のテーマを使用します'
+        return 'Use light theme with bright background'
       case 'dark':
-        return '暗い背景色のテーマを使用します'
+        return 'Use dark theme with dark background'
       default:
         return ''
     }
@@ -75,7 +75,7 @@ export function ThemeToggle(): JSX.Element {
 
   return (
     <TColumn gap={2}>
-      <TText variant="subtitle">テーマ設定</TText>
+      <TText variant="subtitle">Theme Settings</TText>
       <TRadioGroup name="themeMode" control={control} items={items} row={false} />
       <TBox>
         <TText>{getHelpText()}</TText>

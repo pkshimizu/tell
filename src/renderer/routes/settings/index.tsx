@@ -11,7 +11,7 @@ export const Route = createFileRoute('/settings/')({
 function RouteComponent() {
   return (
     <TColumn gap={3} width="100%">
-      <TText variant="title">一般設定</TText>
+      <TText variant="title">General</TText>
       <TCard>
         <ThemeToggle />
       </TCard>
