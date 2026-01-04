@@ -1,10 +1,10 @@
 import { useContext } from 'react'
-import { ThemeContext } from '@renderer/contexts/theme-context'
+import { ThemeContext, type ThemeContextValue } from '@renderer/contexts/theme-context'
 
 /**
  * テーマコンテキストを使用するフック
  */
-export function useTheme() {
+export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext)
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider')
