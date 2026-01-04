@@ -4,7 +4,7 @@ import { TColumn } from '@renderer/components/layout/flex-box'
 import TText from '@renderer/components/display/text'
 import TBox from '@renderer/components/display/box'
 import TRadioGroup from '@renderer/components/form/radio-group'
-import { useTheme } from '@renderer/hooks/use-theme'
+import { useTheme } from '@renderer/hooks/theme'
 import type { ThemeMode } from '@renderer/types/theme'
 
 interface FormData {

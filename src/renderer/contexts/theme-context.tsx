@@ -4,7 +4,7 @@ import type { ThemeMode } from '@renderer/types/theme'
 import { darkTheme, lightTheme } from '@renderer/theme'
 import { getEffectiveTheme, watchSystemTheme } from '@renderer/utils/theme-utils'
 
-interface ThemeContextValue {
+export interface ThemeContextValue {
   mode: ThemeMode
   setMode: (mode: ThemeMode) => Promise<void>
   effectiveTheme: 'light' | 'dark'

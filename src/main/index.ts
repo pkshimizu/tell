@@ -70,6 +70,12 @@ function createWindow(): void {
   // Start managing window state
   windowStateService?.manage(mainWindow)
 
+  // ウィンドウ作成直後のサイズを確認し、必要に応じて修正
+  const actualBounds = mainWindow.getBounds()
+  if (windowState.height && Math.abs(actualBounds.height - windowState.height) > 10) {
+    mainWindow.setSize(windowState.width, windowState.height)
+  }
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })

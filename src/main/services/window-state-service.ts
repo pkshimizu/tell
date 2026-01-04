@@ -25,9 +25,12 @@ export class WindowStateService {
       return this.getCenteredWindowState()
     }
 
-    // 保存された状態が画面内にあるか確認
-    if (this.isWindowStateValid(savedState)) {
-      return savedState
+    // マルチディスプレイ対応: 保存されたディスプレイ情報を考慮して復元
+    const adjustedState = this.adjustWindowStateForCurrentDisplays(savedState)
+
+    // 調整後の状態が画面内にあるか確認
+    if (this.isWindowStateValid(adjustedState)) {
+      return adjustedState
     }
 
     // 無効な場合は中央配置の状態を返す
@@ -55,18 +58,106 @@ export class WindowStateService {
    */
   private getCenteredWindowState(): WindowState {
     const primaryDisplay = screen.getPrimaryDisplay()
-    const { width, height } = primaryDisplay.workAreaSize
-    const { x, y } = primaryDisplay.bounds
+    const workArea = primaryDisplay.workArea
 
-    const windowWidth = Math.min(defaultWindowState.width, width * 0.8)
-    const windowHeight = Math.min(defaultWindowState.height, height * 0.8)
+    // workAreaはタスクバー等を除いた利用可能領域
+    const windowWidth = Math.min(defaultWindowState.width, workArea.width * 0.8)
+    const windowHeight = Math.min(defaultWindowState.height, workArea.height * 0.8)
 
     return {
       ...defaultWindowState,
-      x: Math.round(x + (width - windowWidth) / 2),
-      y: Math.round(y + (height - windowHeight) / 2),
+      x: Math.round(workArea.x + (workArea.width - windowWidth) / 2),
+      y: Math.round(workArea.y + (workArea.height - windowHeight) / 2),
       width: windowWidth,
       height: windowHeight
+    }
+  }
+
+  /**
+   * 現在のディスプレイ構成に合わせてウィンドウ状態を調整
+   */
+  private adjustWindowStateForCurrentDisplays(savedState: WindowState): WindowState {
+    // 保存されたディスプレイ情報がない場合はそのまま返す
+    if (!savedState.display || savedState.x === undefined || savedState.y === undefined) {
+      return savedState
+    }
+
+    const currentDisplays = screen.getAllDisplays()
+    const savedDisplay = savedState.display
+
+    // まず同じIDのディスプレイを探す
+    let matchingDisplay = currentDisplays.find((display) => display.id === savedDisplay.id)
+
+    // IDで見つからない場合は、同じサイズのディスプレイを探す
+    if (!matchingDisplay) {
+      matchingDisplay = currentDisplays.find(
+        (display) =>
+          display.bounds.width === savedDisplay.bounds.width &&
+          display.bounds.height === savedDisplay.bounds.height
+      )
+    }
+
+    if (matchingDisplay) {
+      // 同じディスプレイが見つかった場合、相対位置を維持して復元
+      const relativeX = savedState.x - savedDisplay.bounds.x
+      const relativeY = savedState.y - savedDisplay.bounds.y
+
+      return {
+        ...savedState,
+        x: matchingDisplay.bounds.x + relativeX,
+        y: matchingDisplay.bounds.y + relativeY,
+        width: savedState.width, // 保存されたサイズをそのまま使用
+        height: savedState.height, // 保存されたサイズをそのまま使用
+        display: {
+          id: matchingDisplay.id,
+          bounds: matchingDisplay.bounds
+        }
+      }
+    }
+
+    // 同じサイズのディスプレイが見つからない場合、
+    // 保存時のディスプレイに最も近い位置のディスプレイを探す
+    const savedCenterX = savedDisplay.bounds.x + savedDisplay.bounds.width / 2
+    const savedCenterY = savedDisplay.bounds.y + savedDisplay.bounds.height / 2
+
+    let closestDisplay = currentDisplays[0]
+    let minDistance = Infinity
+
+    for (const display of currentDisplays) {
+      const centerX = display.bounds.x + display.bounds.width / 2
+      const centerY = display.bounds.y + display.bounds.height / 2
+      const distance = Math.sqrt(
+        Math.pow(centerX - savedCenterX, 2) + Math.pow(centerY - savedCenterY, 2)
+      )
+
+      if (distance < minDistance) {
+        minDistance = distance
+        closestDisplay = display
+      }
+    }
+
+    // ウィンドウが新しいディスプレイに収まるように調整
+    const relativeX = (savedState.x - savedDisplay.bounds.x) / savedDisplay.bounds.width
+    const relativeY = (savedState.y - savedDisplay.bounds.y) / savedDisplay.bounds.height
+
+    let newX = closestDisplay.bounds.x + relativeX * closestDisplay.bounds.width
+    let newY = closestDisplay.bounds.y + relativeY * closestDisplay.bounds.height
+
+    // ウィンドウが画面外に出ないように調整
+    const maxX = closestDisplay.bounds.x + closestDisplay.bounds.width - savedState.width
+    const maxY = closestDisplay.bounds.y + closestDisplay.bounds.height - savedState.height
+
+    newX = Math.max(closestDisplay.bounds.x, Math.min(newX, maxX))
+    newY = Math.max(closestDisplay.bounds.y, Math.min(newY, maxY))
+
+    return {
+      ...savedState,
+      x: Math.round(newX),
+      y: Math.round(newY),
+      display: {
+        id: closestDisplay.id,
+        bounds: closestDisplay.bounds
+      }
     }
   }
 
@@ -144,6 +235,7 @@ export class WindowStateService {
       isMaximized: this.window.isMaximized(),
       isFullScreen: this.window.isFullScreen(),
       display: {
+        id: currentDisplay.id,
         bounds: currentDisplay.bounds
       }
     }
