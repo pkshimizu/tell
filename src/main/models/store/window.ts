@@ -2,6 +2,7 @@
  * ディスプレイ情報
  */
 export interface WindowDisplay {
+  id: number
   bounds: {
     x: number
     y: number
