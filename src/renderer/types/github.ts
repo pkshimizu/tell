@@ -57,4 +57,6 @@ export interface GitHubApiPullRequest {
   htmlUrl: string
   createdAt: string
   updatedAt: string
+  sourceBranch: string
+  targetBranch: string
 }

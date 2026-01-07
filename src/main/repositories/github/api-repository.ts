@@ -47,6 +47,7 @@ interface GitHubPullRequestResponse {
   assignees: GitHubUserResponse[]
   requested_reviewers: GitHubUserResponse[]
   base: {
+    ref: string
     repo: {
       name: string
       html_url: string
@@ -56,6 +57,9 @@ interface GitHubPullRequestResponse {
         avatar_url: string
       }
     }
+  }
+  head: {
+    ref: string
   }
   [key: string]: unknown
 }
@@ -379,7 +383,9 @@ export class GitHubApiRepository {
           title: pull.title,
           htmlUrl: pull.html_url,
           createdAt: pull.created_at,
-          updatedAt: pull.updated_at
+          updatedAt: pull.updated_at,
+          sourceBranch: pull.head.ref,
+          targetBranch: pull.base.ref
         }
 
         return pullRequest
