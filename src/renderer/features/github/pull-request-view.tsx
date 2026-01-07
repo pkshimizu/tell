@@ -14,6 +14,7 @@ import PendingIcon from '@renderer/components/display/icons/pending'
 import DismissedIcon from '@renderer/components/display/icons/dismissed'
 import QuestionIcon from '@renderer/components/display/icons/question'
 import TLink from '@renderer/components/navigation/link'
+import TBranchArrow from '@renderer/components/display/branch-arrow'
 
 type Props = {
   pullRequest: GitHubApiPullRequest
@@ -48,6 +49,10 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
             <TLink href={pullRequest.htmlUrl}>
               <TText>{pullRequest.title}</TText>
             </TLink>
+            <TBranchArrow
+              sourceBranch={pullRequest.sourceBranch}
+              targetBranch={pullRequest.targetBranch}
+            />
             <TRow gap={1}>
               <TText variant={'caption'}>{text.fromNow(pullRequest.createdAt)} created</TText>
               <TText variant={'caption'}>/</TText>
