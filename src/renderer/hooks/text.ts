@@ -13,7 +13,7 @@ export default function useText() {
       }
       return dayjs(date).format('YYYY/MM/DD HH:mm:ss')
     },
-    fromNow: (date: string) => {
+    fromNow: (date: string | Date) => {
       return dayjs(date).fromNow()
     }
   }

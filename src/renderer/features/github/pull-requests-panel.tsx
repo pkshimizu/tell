@@ -15,8 +15,10 @@ import GitHubIcon from '@renderer/components/display/icons/github'
 import TIconButton from '@renderer/components/form/icon-button'
 import { IoRefresh } from 'react-icons/io5'
 import useMessage from '@renderer/hooks/message'
+import usePullRequests from '@renderer/hooks/pull-requests'
 import TCheckbox from '@renderer/components/form/checkbox'
 import { useForm } from 'react-hook-form'
+import useText from '@renderer/hooks/text'
 
 type Props = {
   state: 'open' | 'closed'
@@ -58,11 +60,19 @@ function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerReposi
 }
 
 export default function GitHubPullRequestsPanel(props: Props) {
+  const text = useText()
   const message = useMessage()
-  const [pullRequests, setPullRequests] = useState<GitHubApiPullRequest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const {
+    pullRequests,
+    loading,
+    refreshing,
+    error,
+    lastFetchedAt,
+    fetchPullRequests,
+    refreshPullRequests
+  } = usePullRequests()
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
   const { control, watch } = useForm<FilterFormData>({
     defaultValues: {
@@ -72,38 +82,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
 
   const filterMyPRs = watch('filterMyPRs')
 
-  const fetchPullRequests = useCallback(
-    async (showLoading: boolean = false): Promise<void> => {
-      try {
-        if (showLoading) {
-          setLoading(true)
-        } else {
-          setRefreshing(true)
-        }
-        const result = await window.api.github.getPullRequests(props.state)
-        if (result.success && result.data) {
-          setPullRequests(result.data as GitHubApiPullRequest[])
-        } else {
-          message.setMessage('error', result.error || 'Failed to fetch pull requests')
-        }
-      } catch (err) {
-        message.setMessage('error', err instanceof Error ? err.message : 'Unknown error occurred')
-      } finally {
-        if (showLoading) {
-          setLoading(false)
-        } else {
-          setRefreshing(false)
-        }
-      }
-    },
-    // message全体を依存配列に含めると無限ループが発生するため、setMessageのみを含める
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.state, message.setMessage]
-  )
-
-  const handleRefresh = useCallback(() => {
-    void fetchPullRequests(false)
-  }, [fetchPullRequests])
+  const handleRefresh = useCallback(async () => {
+    await refreshPullRequests(props.state)
+    if (error) {
+      message.setMessage('error', error)
+    }
+  }, [refreshPullRequests, props.state, error, message])
 
   // GitHubアカウント取得
   useEffect(() => {
@@ -115,16 +99,26 @@ export default function GitHubPullRequestsPanel(props: Props) {
     })()
   }, [])
 
+  // エラーメッセージの表示
   useEffect(() => {
-    // 初回読み込み
-    void fetchPullRequests(true)
+    if (error) {
+      message.setMessage('error', error)
+    }
+  }, [error, message])
+
+  useEffect(() => {
+    // 初回読み込み（データがない場合のみ）
+    if (isInitialLoad) {
+      void fetchPullRequests(props.state, false)
+      setIsInitialLoad(false)
+    }
 
     // 5分ごとにポーリング
     // GitHub APIのレート制限: 5,000リクエスト/時間
     // 5分間隔であれば、最大12リクエスト/時間となり、レート制限に余裕がある
     const intervalId = setInterval(
       () => {
-        void fetchPullRequests(false)
+        void refreshPullRequests(props.state)
       },
       5 * 60 * 1000
     ) // 5分 = 300,000ms
@@ -133,7 +127,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
     return () => {
       clearInterval(intervalId)
     }
-  }, [fetchPullRequests])
+  }, [props.state, fetchPullRequests, refreshPullRequests, isInitialLoad])
 
   // 自分が作成者、assignee、またはreviewerに含まれているPRのみをフィルタリング
   const filteredPullRequests = filterMyPRs
@@ -152,6 +146,11 @@ export default function GitHubPullRequestsPanel(props: Props) {
         <TRow align="center" gap={1}>
           <GitHubIcon />
           <TText>Open Pull Requests</TText>
+          {lastFetchedAt && (
+            <TText variant="caption">
+              (Last updated: {text.formatDateTime(lastFetchedAt) ?? ''})
+            </TText>
+          )}
         </TRow>
         <TRow>
           <TCheckbox name="filterMyPRs" control={control} label="Only my PRs" />
@@ -161,7 +160,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
         </TRow>
       </TRow>
 
-      {loading ? (
+      {loading && pullRequests.length === 0 ? (
         <TColumn gap={1} align="center">
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
