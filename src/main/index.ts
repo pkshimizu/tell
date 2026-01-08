@@ -96,7 +96,7 @@ function createWindow(): void {
 
 function setupApplicationMenu(): void {
   if (process.platform === 'darwin') {
-    // macOS requires a menu bar, so create a minimal one with only app menu
+    // macOS requires a menu bar, so create with app menu and edit menu
     const template: Electron.MenuItemConstructorOptions[] = [
       {
         label: app.name,
@@ -114,14 +114,91 @@ function setupApplicationMenu(): void {
             }
           }
         ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          {
+            label: 'Undo',
+            accelerator: 'Command+Z',
+            role: 'undo'
+          },
+          {
+            label: 'Redo',
+            accelerator: 'Command+Shift+Z',
+            role: 'redo'
+          },
+          { type: 'separator' },
+          {
+            label: 'Cut',
+            accelerator: 'Command+X',
+            role: 'cut'
+          },
+          {
+            label: 'Copy',
+            accelerator: 'Command+C',
+            role: 'copy'
+          },
+          {
+            label: 'Paste',
+            accelerator: 'Command+V',
+            role: 'paste'
+          },
+          {
+            label: 'Select All',
+            accelerator: 'Command+A',
+            role: 'selectAll'
+          }
+        ]
       }
     ]
 
     const menu = Menu.buildFromTemplate(template)
     Menu.setApplicationMenu(menu)
   } else {
-    // Windows and Linux - remove menu completely
-    Menu.setApplicationMenu(null)
+    // Windows and Linux - create minimal menu for keyboard shortcuts
+    // Menu bar will be hidden due to autoHideMenuBar: true
+    const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: 'Edit',
+        submenu: [
+          {
+            label: 'Undo',
+            accelerator: 'Ctrl+Z',
+            role: 'undo'
+          },
+          {
+            label: 'Redo',
+            accelerator: 'Ctrl+Shift+Z',
+            role: 'redo'
+          },
+          { type: 'separator' },
+          {
+            label: 'Cut',
+            accelerator: 'Ctrl+X',
+            role: 'cut'
+          },
+          {
+            label: 'Copy',
+            accelerator: 'Ctrl+C',
+            role: 'copy'
+          },
+          {
+            label: 'Paste',
+            accelerator: 'Ctrl+V',
+            role: 'paste'
+          },
+          {
+            label: 'Select All',
+            accelerator: 'Ctrl+A',
+            role: 'selectAll'
+          }
+        ]
+      }
+    ]
+
+    const menu = Menu.buildFromTemplate(template)
+    Menu.setApplicationMenu(menu)
   }
 }
 
