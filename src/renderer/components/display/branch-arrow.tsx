@@ -1,7 +1,7 @@
 import TText from '@renderer/components/display/text'
-import { TRow } from '@renderer/components/layout/flex-box'
 import TTooltip from '@renderer/components/feedback/tooltip'
-import { Box } from '@mui/material'
+import TGrid from '@renderer/components/layout/grid'
+import ArrowForwardIcon from '@renderer/components/display/icons/arrow-forward'
 
 interface Props {
   sourceBranch: string
@@ -10,24 +10,20 @@ interface Props {
 
 export default function TBranchArrow({ sourceBranch, targetBranch }: Props) {
   return (
-    <TRow gap={1} align="center">
+    <TGrid columns={['1fr', '16px', '1fr']} columnGap={1} alignItems="center">
       <TTooltip title={sourceBranch}>
-        <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%' }}>
-          <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
-            {sourceBranch}
-          </TText>
-        </Box>
+        <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
+          {sourceBranch}
+        </TText>
       </TTooltip>
 
-      <TText variant="caption">→</TText>
+      <ArrowForwardIcon size={16} />
 
       <TTooltip title={targetBranch}>
-        <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%' }}>
-          <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
-            {targetBranch}
-          </TText>
-        </Box>
+        <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
+          {targetBranch}
+        </TText>
       </TTooltip>
-    </TRow>
+    </TGrid>
   )
 }
