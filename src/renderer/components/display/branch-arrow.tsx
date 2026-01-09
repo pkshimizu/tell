@@ -10,20 +10,38 @@ interface Props {
 
 export default function TBranchArrow({ sourceBranch, targetBranch }: Props) {
   return (
-    <TRow gap={1} align="center">
+    <TRow gap={1} align="center" fullWidth overflow="hidden">
       <TTooltip title={sourceBranch}>
-        <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%' }}>
-          <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
+        <Box
+          sx={{
+            flex: '1 1 0',
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <TText variant="caption" bold>
             {sourceBranch}
           </TText>
         </Box>
       </TTooltip>
 
-      <TText variant="caption">→</TText>
+      <Box sx={{ flexShrink: 0 }}>
+        <TText variant="caption">→</TText>
+      </Box>
 
       <TTooltip title={targetBranch}>
-        <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%' }}>
-          <TText variant="caption" bold whiteSpace="nowrap" overflow="hidden">
+        <Box
+          sx={{
+            flex: '1 1 0',
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <TText variant="caption" bold>
             {targetBranch}
           </TText>
         </Box>
