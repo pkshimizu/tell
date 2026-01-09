@@ -3,11 +3,8 @@ import {
   GitHubApiOwner,
   GitHubApiRepository as GitHubApiRepositoryModel,
   GitHubApiPullRequest,
-  GitHubApiPullRequestAssignee,
-  GitHubApiPullRequestAuthor,
   GitHubApiPullRequestReviewer,
-  GitHubPullRequestState,
-  GitHubApiPullRequestStatus
+  GitHubPullRequestState
 } from '@main/models/github'
 
 interface GitHubUserResponse {
@@ -36,52 +33,21 @@ interface GitHubRepositoryResponse {
   [key: string]: unknown
 }
 
-interface GitHubPullRequestResponse {
-  id: number
-  number: number
-  title: string
-  html_url: string
-  created_at: string
-  updated_at: string
-  user: GitHubUserResponse
-  assignees: GitHubUserResponse[]
-  requested_reviewers: GitHubUserResponse[]
-  base: {
-    ref: string
-    repo: {
-      name: string
-      html_url: string
-      owner: {
-        login: string
-        html_url: string
-        avatar_url: string
-      }
-    }
-  }
-  head: {
-    ref: string
-  }
-  [key: string]: unknown
-}
-
-interface GitHubReviewResponse {
-  id: number
-  user: GitHubUserResponse
-  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'PENDING' | 'DISMISSED'
-  body: string | null
-  [key: string]: unknown
-}
-
 export class GitHubApiRepository {
   private readonly baseUrl = 'https://api.github.com'
 
   /**
-   * レート制限エラーをチェックして、わかりやすいエラーメッセージを生成する
+   * Handle API errors and generate user-friendly error messages
    */
   private async handleApiError(response: Response, defaultMessage: string): Promise<never> {
     const errorBody = await response.text()
 
-    // レート制限エラーのチェック
+    // Authentication error
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please check your GitHub token in settings.')
+    }
+
+    // Rate limit error
     if (response.status === 403) {
       try {
         const errorJson = JSON.parse(errorBody)
@@ -89,17 +55,53 @@ export class GitHubApiRepository {
           const resetTime = response.headers.get('x-ratelimit-reset')
           if (resetTime) {
             const resetDate = new Date(parseInt(resetTime) * 1000)
+            const formattedTime = resetDate.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
             throw new Error(
-              `GitHub API rate limit exceeded. Please try again after ${resetDate.toLocaleTimeString()}.`
+              `GitHub API rate limit exceeded. Please wait until ${formattedTime} to continue.`
             )
           }
           throw new Error('GitHub API rate limit exceeded. Please try again later.')
         }
+        // Other 403 errors (e.g., insufficient permissions)
+        if (errorJson.message) {
+          throw new Error(`Permission denied: ${errorJson.message}`)
+        }
       } catch (e) {
-        if (e instanceof Error && e.message.includes('rate limit')) {
+        if (
+          e instanceof Error &&
+          (e.message.includes('rate limit') || e.message.includes('Permission'))
+        ) {
           throw e
         }
       }
+    }
+
+    // Not found error
+    if (response.status === 404) {
+      throw new Error(`Resource not found. Please check your repository settings.`)
+    }
+
+    // Server error
+    if (response.status >= 500) {
+      throw new Error('GitHub server error. Please try again later.')
+    }
+
+    // Network or other errors
+    if (!response.ok) {
+      let errorMessage = defaultMessage
+      try {
+        const errorJson = JSON.parse(errorBody)
+        if (errorJson.message) {
+          errorMessage = `${defaultMessage}: ${errorJson.message}`
+        }
+      } catch {
+        // If body is not JSON, use status text
+        errorMessage = `${defaultMessage}: ${response.statusText}`
+      }
+      throw new Error(errorMessage)
     }
 
     throw new Error(`${defaultMessage}: ${response.status} ${response.statusText} - ${errorBody}`)
@@ -180,10 +182,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch GitHub owners: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch GitHub organizations')
     }
 
     const data = (await response.json()) as GitHubOrganizationResponse[]
@@ -205,10 +204,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch user repositories: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch user repositories')
     }
 
     const data = (await response.json()) as GitHubRepositoryResponse[]
@@ -232,10 +228,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch GitHub repositories: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch repositories')
     }
 
     const data = (await response.json()) as GitHubRepositoryResponse[]
@@ -246,151 +239,248 @@ export class GitHubApiRepository {
     }))
   }
 
+  /**
+   * GraphQL APIを使用して複数リポジトリのプルリクエストを一度に取得
+   */
   async getPullRequests(
     personalAccessToken: string,
-    ownerLogin: string,
-    repositoryName: string,
+    repositories: Array<{ owner: string; name: string }>,
     state: GitHubPullRequestState
   ): Promise<GitHubApiPullRequest[]> {
-    // PR一覧を取得
-    const pullsResponse = await fetch(
-      `${this.baseUrl}/repos/${ownerLogin}/${repositoryName}/pulls?state=${state}&per_page=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${personalAccessToken}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      }
-    )
-
-    if (!pullsResponse.ok) {
-      await this.handleApiError(pullsResponse, 'Failed to fetch pull requests')
+    if (repositories.length === 0) {
+      return []
     }
 
-    const pulls = (await pullsResponse.json()) as GitHubPullRequestResponse[]
+    // GraphQL stateの変換 (REST APIのstateとGraphQLのstatesの違い)
+    const graphqlState = state === 'open' ? 'OPEN' : 'CLOSED'
 
-    // 各PRのレビュー情報を取得
-    return await Promise.all(
-      pulls.map(async (pull) => {
-        const reviewsResponse = await fetch(
-          `${this.baseUrl}/repos/${ownerLogin}/${repositoryName}/pulls/${pull.number}/reviews`,
-          {
-            headers: {
-              Authorization: `Bearer ${personalAccessToken}`,
-              Accept: 'application/vnd.github+json',
-              'X-GitHub-Api-Version': '2022-11-28'
+    // GraphQLクエリの構築
+    // 各リポジトリごとにクエリフラグメントを生成
+    const repoQueries = repositories
+      .map((repo, index) => {
+        const repoAlias = `repo_${index}`
+        return `
+        ${repoAlias}: repository(owner: "${repo.owner}", name: "${repo.name}") {
+          name
+          url
+          owner {
+            login
+            url
+            avatarUrl
+          }
+          pullRequests(states: [${graphqlState}], first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
+            nodes {
+              id
+              number
+              title
+              url
+              createdAt
+              updatedAt
+              baseRefName
+              headRefName
+
+              author {
+                login
+                url
+                avatarUrl
+              }
+
+              assignees(first: 10) {
+                nodes {
+                  login
+                  url
+                  avatarUrl
+                }
+              }
+
+              reviewRequests(first: 10) {
+                nodes {
+                  requestedReviewer {
+                    ... on User {
+                      login
+                      url
+                      avatarUrl
+                    }
+                    ... on Team {
+                      name
+                      url
+                      avatarUrl
+                    }
+                  }
+                }
+              }
+
+              reviews(first: 100) {
+                nodes {
+                  author {
+                    login
+                    url
+                    avatarUrl
+                  }
+                  state
+                  body
+                }
+              }
             }
           }
-        )
-
-        let reviews: GitHubReviewResponse[] = []
-        if (reviewsResponse.ok) {
-          reviews = (await reviewsResponse.json()) as GitHubReviewResponse[]
         }
+      `
+      })
+      .join('\n')
 
-        // PR作成者情報を変換
-        const author: GitHubApiPullRequestAuthor = {
-          name: pull.user.login,
-          htmlUrl: pull.user.html_url,
-          avatarUrl: pull.user.avatar_url
-        }
+    const query = `
+      query GetPullRequests {
+        ${repoQueries}
+      }
+    `
 
-        // アサイニー情報を変換
-        const assignees: GitHubApiPullRequestAssignee[] = pull.assignees.map((assignee) => ({
-          name: assignee.login,
-          htmlUrl: assignee.html_url,
-          avatarUrl: assignee.avatar_url
-        }))
+    const response = await fetch(`${this.baseUrl}/graphql`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${personalAccessToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/vnd.github+json'
+      },
+      body: JSON.stringify({ query })
+    })
+
+    if (!response.ok) {
+      await this.handleApiError(response, 'Failed to fetch pull requests via GraphQL')
+    }
+
+    const data = await response.json()
+
+    if (data.errors) {
+      throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`)
+    }
+
+    // レスポンスデータをGitHubApiPullRequest形式に変換
+    const pullRequests: GitHubApiPullRequest[] = []
+
+    for (const key in data.data) {
+      const repo = data.data[key]
+      if (!repo || !repo.pullRequests || !repo.pullRequests.nodes) continue
+
+      for (const pr of repo.pullRequests.nodes) {
+        if (!pr) continue
 
         // レビュワー情報を集約
         const reviewerMap = new Map<string, GitHubApiPullRequestReviewer>()
 
-        // リクエストされたレビュワーを追加（まだレビューしていない）
-        pull.requested_reviewers.forEach((reviewer) => {
-          reviewerMap.set(reviewer.login, {
-            name: reviewer.login,
-            htmlUrl: reviewer.html_url,
-            avatarUrl: reviewer.avatar_url,
-            comments: 0,
-            status: 'pending'
-          })
-        })
-
-        // 実際のレビューを処理
-        reviews.forEach((review) => {
-          const reviewerLogin = review.user.login
-          const existing = reviewerMap.get(reviewerLogin)
-
-          // コメント数をカウント（bodyがある場合）
-          const commentCount = review.body ? 1 : 0
-
-          if (existing) {
-            // 既存のレビュワーを更新
-            existing.comments += commentCount
-            // ステータスを更新（APPROVEDが最優先）
-            switch (review.state) {
-              case 'APPROVED':
-                existing.status = 'approved'
-                break
-              case 'CHANGES_REQUESTED':
-                existing.status = 'changes_requested'
-                break
-              case 'COMMENTED':
-                if (existing.status !== 'approved') {
-                  existing.status = 'commented'
-                }
-                break
-              case 'PENDING':
-                if (existing.status !== 'approved') {
-                  existing.status = 'pending'
-                }
-                break
-              case 'DISMISSED':
-                if (existing.status !== 'approved') {
-                  existing.status = 'dismissed'
-                }
+        // レビューリクエストされたユーザーを追加
+        if (pr.reviewRequests && pr.reviewRequests.nodes) {
+          for (const reviewRequest of pr.reviewRequests.nodes) {
+            if (reviewRequest?.requestedReviewer) {
+              const reviewer = reviewRequest.requestedReviewer
+              reviewerMap.set(reviewer.login || reviewer.name, {
+                name: reviewer.login || reviewer.name,
+                htmlUrl: reviewer.url,
+                avatarUrl: reviewer.avatarUrl || '',
+                comments: 0,
+                status: 'pending'
+              })
             }
-          } else {
-            // 新しいレビュワーを追加
-            reviewerMap.set(reviewerLogin, {
-              name: reviewerLogin,
-              htmlUrl: review.user.html_url,
-              avatarUrl: review.user.avatar_url,
-              comments: commentCount,
-              status: review.state.toLowerCase() as GitHubApiPullRequestStatus
-            })
           }
-        })
-
-        const reviewers = Array.from(reviewerMap.values())
-
-        // GitHubApiPullRequestオブジェクトを作成
-        const pullRequest: GitHubApiPullRequest = {
-          id: pull.id.toString(),
-          owner: {
-            login: pull.base.repo.owner.login,
-            htmlUrl: pull.base.repo.owner.html_url,
-            avatarUrl: pull.base.repo.owner.avatar_url
-          },
-          repository: {
-            name: pull.base.repo.name,
-            htmlUrl: pull.base.repo.html_url
-          },
-          author,
-          assignees,
-          reviewers,
-          title: pull.title,
-          htmlUrl: pull.html_url,
-          createdAt: pull.created_at,
-          updatedAt: pull.updated_at,
-          sourceBranch: pull.head.ref,
-          targetBranch: pull.base.ref
         }
 
-        return pullRequest
-      })
-    )
+        // 実際のレビューを処理
+        if (pr.reviews && pr.reviews.nodes) {
+          for (const review of pr.reviews.nodes) {
+            if (!review?.author) continue
+
+            const reviewerLogin = review.author.login
+            const existing = reviewerMap.get(reviewerLogin)
+            const commentCount = review.body ? 1 : 0
+
+            if (existing) {
+              existing.comments += commentCount
+              // GraphQL state to our status mapping
+              switch (review.state) {
+                case 'APPROVED':
+                  existing.status = 'approved'
+                  break
+                case 'CHANGES_REQUESTED':
+                  if (existing.status !== 'approved') {
+                    existing.status = 'changes_requested'
+                  }
+                  break
+                case 'COMMENTED':
+                  if (existing.status !== 'approved' && existing.status !== 'changes_requested') {
+                    existing.status = 'commented'
+                  }
+                  break
+                case 'PENDING':
+                  if (existing.status === 'pending') {
+                    existing.status = 'pending'
+                  }
+                  break
+                case 'DISMISSED':
+                  if (existing.status !== 'approved') {
+                    existing.status = 'dismissed'
+                  }
+                  break
+              }
+            } else {
+              const status =
+                review.state === 'APPROVED'
+                  ? 'approved'
+                  : review.state === 'CHANGES_REQUESTED'
+                    ? 'changes_requested'
+                    : review.state === 'COMMENTED'
+                      ? 'commented'
+                      : review.state === 'DISMISSED'
+                        ? 'dismissed'
+                        : 'pending'
+
+              reviewerMap.set(reviewerLogin, {
+                name: reviewerLogin,
+                htmlUrl: review.author.url,
+                avatarUrl: review.author.avatarUrl || '',
+                comments: commentCount,
+                status
+              })
+            }
+          }
+        }
+
+        const pullRequest: GitHubApiPullRequest = {
+          id: pr.id,
+          owner: {
+            login: repo.owner.login,
+            htmlUrl: repo.owner.url,
+            avatarUrl: repo.owner.avatarUrl || ''
+          },
+          repository: {
+            name: repo.name,
+            htmlUrl: repo.url
+          },
+          author: {
+            name: pr.author?.login || 'unknown',
+            htmlUrl: pr.author?.url || '',
+            avatarUrl: pr.author?.avatarUrl || ''
+          },
+          assignees:
+            pr.assignees?.nodes?.map(
+              (assignee: { login: string; url: string; avatarUrl?: string }) => ({
+                name: assignee.login,
+                htmlUrl: assignee.url,
+                avatarUrl: assignee.avatarUrl || ''
+              })
+            ) || [],
+          reviewers: Array.from(reviewerMap.values()),
+          title: pr.title,
+          htmlUrl: pr.url,
+          createdAt: pr.createdAt,
+          updatedAt: pr.updatedAt,
+          sourceBranch: pr.headRefName,
+          targetBranch: pr.baseRefName
+        }
+
+        pullRequests.push(pullRequest)
+      }
+    }
+
+    return pullRequests
   }
 }
 

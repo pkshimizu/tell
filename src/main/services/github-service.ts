@@ -71,10 +71,33 @@ export class GitHubService {
       return []
     }
 
-    // 各リポジトリのプルリクエスト取得を並列実行
-    const promises = allRepositories.map(({ account, owner, repository }) =>
+    // Group repositories by account (same token)
+    const repositoriesByAccount = new Map<
+      string,
+      {
+        token: string
+        repositories: Array<{ owner: string; name: string }>
+      }
+    >()
+
+    for (const { account, owner, repository } of allRepositories) {
+      const accountKey = account.id
+      if (!repositoriesByAccount.has(accountKey)) {
+        repositoriesByAccount.set(accountKey, {
+          token: account.personalAccessToken,
+          repositories: []
+        })
+      }
+      repositoriesByAccount.get(accountKey)!.repositories.push({
+        owner: owner.login,
+        name: repository.name
+      })
+    }
+
+    // Execute GraphQL queries for each account (one request per account)
+    const promises = Array.from(repositoriesByAccount.values()).map(({ token, repositories }) =>
       githubApiRepository
-        .getPullRequests(account.personalAccessToken, owner.login, repository.name, state)
+        .getPullRequests(token, repositories, state)
         .then((prs) => ({
           status: 'fulfilled' as const,
           pullRequests: prs
