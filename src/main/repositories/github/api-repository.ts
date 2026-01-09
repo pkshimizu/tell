@@ -76,12 +76,17 @@ export class GitHubApiRepository {
   private readonly baseUrl = 'https://api.github.com'
 
   /**
-   * レート制限エラーをチェックして、わかりやすいエラーメッセージを生成する
+   * Handle API errors and generate user-friendly error messages
    */
   private async handleApiError(response: Response, defaultMessage: string): Promise<never> {
     const errorBody = await response.text()
 
-    // レート制限エラーのチェック
+    // Authentication error
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please check your GitHub token in settings.')
+    }
+
+    // Rate limit error
     if (response.status === 403) {
       try {
         const errorJson = JSON.parse(errorBody)
@@ -89,17 +94,53 @@ export class GitHubApiRepository {
           const resetTime = response.headers.get('x-ratelimit-reset')
           if (resetTime) {
             const resetDate = new Date(parseInt(resetTime) * 1000)
+            const formattedTime = resetDate.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })
             throw new Error(
-              `GitHub API rate limit exceeded. Please try again after ${resetDate.toLocaleTimeString()}.`
+              `GitHub API rate limit exceeded. Please wait until ${formattedTime} to continue.`
             )
           }
           throw new Error('GitHub API rate limit exceeded. Please try again later.')
         }
+        // Other 403 errors (e.g., insufficient permissions)
+        if (errorJson.message) {
+          throw new Error(`Permission denied: ${errorJson.message}`)
+        }
       } catch (e) {
-        if (e instanceof Error && e.message.includes('rate limit')) {
+        if (
+          e instanceof Error &&
+          (e.message.includes('rate limit') || e.message.includes('Permission'))
+        ) {
           throw e
         }
       }
+    }
+
+    // Not found error
+    if (response.status === 404) {
+      throw new Error(`Resource not found. Please check your repository settings.`)
+    }
+
+    // Server error
+    if (response.status >= 500) {
+      throw new Error('GitHub server error. Please try again later.')
+    }
+
+    // Network or other errors
+    if (!response.ok) {
+      let errorMessage = defaultMessage
+      try {
+        const errorJson = JSON.parse(errorBody)
+        if (errorJson.message) {
+          errorMessage = `${defaultMessage}: ${errorJson.message}`
+        }
+      } catch {
+        // If body is not JSON, use status text
+        errorMessage = `${defaultMessage}: ${response.statusText}`
+      }
+      throw new Error(errorMessage)
     }
 
     throw new Error(`${defaultMessage}: ${response.status} ${response.statusText} - ${errorBody}`)
@@ -180,10 +221,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch GitHub owners: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch GitHub organizations')
     }
 
     const data = (await response.json()) as GitHubOrganizationResponse[]
@@ -205,10 +243,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch user repositories: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch user repositories')
     }
 
     const data = (await response.json()) as GitHubRepositoryResponse[]
@@ -232,10 +267,7 @@ export class GitHubApiRepository {
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
-      throw new Error(
-        `Failed to fetch GitHub repositories: ${response.status} ${response.statusText} - ${errorBody}`
-      )
+      await this.handleApiError(response, 'Failed to fetch repositories')
     }
 
     const data = (await response.json()) as GitHubRepositoryResponse[]

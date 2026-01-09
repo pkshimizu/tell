@@ -13,6 +13,7 @@ import {
 import TCircularProgress from '@renderer/components/feedback/circular-progress'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import TIconButton from '@renderer/components/form/icon-button'
+import TButton from '@renderer/components/form/button'
 import { IoRefresh } from 'react-icons/io5'
 import useMessage from '@renderer/hooks/message'
 import usePullRequests from '@renderer/hooks/pull-requests'
@@ -84,10 +85,11 @@ export default function GitHubPullRequestsPanel(props: Props) {
 
   const handleRefresh = useCallback(async () => {
     await refreshPullRequests(props.state)
-    if (error) {
-      message.setMessage('error', error)
-    }
-  }, [refreshPullRequests, props.state, error, message])
+  }, [refreshPullRequests, props.state])
+
+  const handleRetry = useCallback(async () => {
+    await fetchPullRequests(props.state, true) // Force refresh on retry
+  }, [fetchPullRequests, props.state])
 
   // GitHubアカウント取得
   useEffect(() => {
@@ -164,6 +166,13 @@ export default function GitHubPullRequestsPanel(props: Props) {
         <TColumn gap={1} align="center">
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
+        </TColumn>
+      ) : error && pullRequests.length === 0 ? (
+        <TColumn gap={2} align="center">
+          <TAlert severity="error">{error}</TAlert>
+          <TButton onClick={handleRetry} variant="contained" disabled={loading}>
+            Retry
+          </TButton>
         </TColumn>
       ) : filteredPullRequests.length === 0 ? (
         <TAlert severity={'info'}>No pull requests</TAlert>

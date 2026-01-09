@@ -66,6 +66,7 @@ export default function usePullRequests() {
     }
 
     store.setLoading(true)
+    store.setError(null) // Clear previous errors
     try {
       const result = await window.api.github.getPullRequests(state)
       if (result.success && result.data) {
@@ -74,7 +75,9 @@ export default function usePullRequests() {
         store.setError(result.error || 'Failed to fetch pull requests')
       }
     } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      store.setError(errorMessage)
+      console.error('Failed to fetch pull requests:', err)
     } finally {
       store.setLoading(false)
     }
@@ -82,15 +85,19 @@ export default function usePullRequests() {
 
   const refreshPullRequests = async (state: 'open' | 'closed') => {
     store.setRefreshing(true)
+    // Don't clear error on refresh to keep showing previous errors until successful
     try {
       const result = await window.api.github.getPullRequests(state)
       if (result.success && result.data) {
         store.setPullRequests(result.data as GitHubApiPullRequest[])
+        store.setError(null) // Clear error only on successful fetch
       } else {
-        store.setError(result.error || 'Failed to fetch pull requests')
+        store.setError(result.error || 'Failed to refresh pull requests')
       }
     } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      store.setError(errorMessage)
+      console.error('Failed to refresh pull requests:', err)
     } finally {
       store.setRefreshing(false)
     }
