@@ -15,9 +15,11 @@ type PullRequestsStore = {
   setRefreshing: (refreshing: boolean) => void
   setError: (error: string | null) => void
   clearPullRequests: () => void
+  fetchPullRequests: (state: 'open' | 'closed', forceRefresh?: boolean) => Promise<void>
+  refreshPullRequests: (state: 'open' | 'closed') => Promise<void>
 }
 
-const usePullRequestsStore = create<PullRequestsStore>((set) => ({
+const usePullRequestsStore = create<PullRequestsStore>((set, get) => ({
   // Initial state
   pullRequests: [],
   loading: false,
@@ -53,48 +55,52 @@ const usePullRequestsStore = create<PullRequestsStore>((set) => ({
       lastFetchedAt: null,
       error: null
     })
+  },
+
+  fetchPullRequests: async (state: 'open' | 'closed', forceRefresh: boolean = false) => {
+    const { pullRequests, setLoading, setPullRequests, setError } = get()
+
+    // 既にデータがあり、強制リフレッシュでない場合はスキップ
+    if (pullRequests.length > 0 && !forceRefresh) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const result = await window.api.github.getPullRequests(state)
+      if (result.success && result.data) {
+        setPullRequests(result.data as GitHubApiPullRequest[])
+      } else {
+        setError(result.error || 'Failed to fetch pull requests')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      setLoading(false)
+    }
+  },
+
+  refreshPullRequests: async (state: 'open' | 'closed') => {
+    const { setRefreshing, setPullRequests, setError } = get()
+
+    setRefreshing(true)
+    try {
+      const result = await window.api.github.getPullRequests(state)
+      if (result.success && result.data) {
+        setPullRequests(result.data as GitHubApiPullRequest[])
+      } else {
+        setError(result.error || 'Failed to fetch pull requests')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      setRefreshing(false)
+    }
   }
 }))
 
 export default function usePullRequests() {
   const store = usePullRequestsStore()
-
-  const fetchPullRequests = async (state: 'open' | 'closed', forceRefresh: boolean = false) => {
-    // 既にデータがあり、強制リフレッシュでない場合はスキップ
-    if (store.pullRequests.length > 0 && !forceRefresh) {
-      return
-    }
-
-    store.setLoading(true)
-    try {
-      const result = await window.api.github.getPullRequests(state)
-      if (result.success && result.data) {
-        store.setPullRequests(result.data as GitHubApiPullRequest[])
-      } else {
-        store.setError(result.error || 'Failed to fetch pull requests')
-      }
-    } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      store.setLoading(false)
-    }
-  }
-
-  const refreshPullRequests = async (state: 'open' | 'closed') => {
-    store.setRefreshing(true)
-    try {
-      const result = await window.api.github.getPullRequests(state)
-      if (result.success && result.data) {
-        store.setPullRequests(result.data as GitHubApiPullRequest[])
-      } else {
-        store.setError(result.error || 'Failed to fetch pull requests')
-      }
-    } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      store.setRefreshing(false)
-    }
-  }
 
   return {
     pullRequests: store.pullRequests,
@@ -102,8 +108,8 @@ export default function usePullRequests() {
     refreshing: store.refreshing,
     lastFetchedAt: store.lastFetchedAt,
     error: store.error,
-    fetchPullRequests,
-    refreshPullRequests,
+    fetchPullRequests: store.fetchPullRequests,
+    refreshPullRequests: store.refreshPullRequests,
     clearPullRequests: store.clearPullRequests
   }
 }
