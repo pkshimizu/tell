@@ -3,7 +3,7 @@ import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   GitHubAccount,
   GitHubApiPullRequest,
@@ -11,6 +11,7 @@ import {
   GitHubRepository
 } from '@renderer/types/github'
 import TCircularProgress from '@renderer/components/feedback/circular-progress'
+import TLinearProgress from '@renderer/components/feedback/linear-progress'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import TIconButton from '@renderer/components/form/icon-button'
 import { IoRefresh } from 'react-icons/io5'
@@ -19,6 +20,8 @@ import usePullRequests from '@renderer/hooks/pull-requests'
 import TCheckbox from '@renderer/components/form/checkbox'
 import { useForm } from 'react-hook-form'
 import useText from '@renderer/hooks/text'
+
+const AUTO_RELOAD_INTERVAL_SECONDS = 5 * 60 // 5分
 
 type Props = {
   state: 'open' | 'closed'
@@ -73,6 +76,8 @@ export default function GitHubPullRequestsPanel(props: Props) {
   } = usePullRequests()
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const elapsedSecondsRef = useRef(0)
 
   const { control, watch } = useForm<FilterFormData>({
     defaultValues: {
@@ -82,12 +87,18 @@ export default function GitHubPullRequestsPanel(props: Props) {
 
   const filterMyPRs = watch('filterMyPRs')
 
+  const resetTimer = useCallback(() => {
+    elapsedSecondsRef.current = 0
+    setElapsedSeconds(0)
+  }, [])
+
   const handleRefresh = useCallback(async () => {
     await refreshPullRequests(props.state)
+    resetTimer()
     if (error) {
       message.setMessage('error', error)
     }
-  }, [refreshPullRequests, props.state, error, message])
+  }, [refreshPullRequests, props.state, error, message, resetTimer])
 
   // GitHubアカウント取得
   useEffect(() => {
@@ -113,15 +124,17 @@ export default function GitHubPullRequestsPanel(props: Props) {
       setIsInitialLoad(false)
     }
 
-    // 5分ごとにポーリング
-    // GitHub APIのレート制限: 5,000リクエスト/時間
-    // 5分間隔であれば、最大12リクエスト/時間となり、レート制限に余裕がある
-    const intervalId = setInterval(
-      () => {
+    // 1秒ごとにプログレスバーを更新し、5分経過で自動リロード
+    const intervalId = setInterval(() => {
+      elapsedSecondsRef.current += 1
+      setElapsedSeconds(elapsedSecondsRef.current)
+
+      if (elapsedSecondsRef.current >= AUTO_RELOAD_INTERVAL_SECONDS) {
         void refreshPullRequests(props.state)
-      },
-      5 * 60 * 1000
-    ) // 5分 = 300,000ms
+        elapsedSecondsRef.current = 0
+        setElapsedSeconds(0)
+      }
+    }, 1000)
 
     // クリーンアップ
     return () => {
@@ -152,11 +165,18 @@ export default function GitHubPullRequestsPanel(props: Props) {
             </TText>
           )}
         </TRow>
-        <TRow>
+        <TRow align="center">
           <TCheckbox name="filterMyPRs" control={control} label="Only my PRs" />
-          <TIconButton onClick={handleRefresh} disabled={refreshing}>
-            {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
-          </TIconButton>
+          <TColumn align="center">
+            <TIconButton onClick={handleRefresh} disabled={refreshing}>
+              {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
+            </TIconButton>
+            <TLinearProgress
+              value={100 - (elapsedSeconds / AUTO_RELOAD_INTERVAL_SECONDS) * 100}
+              width={40}
+              height={3}
+            />
+          </TColumn>
         </TRow>
       </TRow>
 
