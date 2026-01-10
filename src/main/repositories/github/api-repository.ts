@@ -6,6 +6,7 @@ import {
   GitHubApiPullRequestReviewer,
   GitHubPullRequestState
 } from '@main/models/github'
+import { logGitHubApiRequest } from '@main/logger'
 
 interface GitHubUserResponse {
   login: string
@@ -108,12 +109,20 @@ export class GitHubApiRepository {
   }
 
   async getAccount(personalAccessToken: string): Promise<GitHubApiAccount> {
-    const response = await fetch(`${this.baseUrl}/user`, {
+    const url = `${this.baseUrl}/user`
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'
       }
+    })
+
+    logGitHubApiRequest({
+      method: 'GET',
+      url,
+      status: response.status,
+      headers: response.headers
     })
 
     if (!response.ok) {
@@ -131,6 +140,7 @@ export class GitHubApiRepository {
   }
 
   async getTokenExpiration(personalAccessToken: string): Promise<Date | null> {
+    const url = `${this.baseUrl}/graphql`
     try {
       // GitHub GraphQL APIを使用してトークン情報を取得
       const query = `
@@ -141,7 +151,7 @@ export class GitHubApiRepository {
         }
       `
 
-      const response = await fetch(`${this.baseUrl}/graphql`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${personalAccessToken}`,
@@ -149,6 +159,14 @@ export class GitHubApiRepository {
           Accept: 'application/vnd.github+json'
         },
         body: JSON.stringify({ query })
+      })
+
+      logGitHubApiRequest({
+        method: 'POST',
+        url,
+        status: response.status,
+        headers: response.headers,
+        isGraphQL: true
       })
 
       // GraphQL APIのレスポンスヘッダーから有効期限を確認
@@ -173,12 +191,20 @@ export class GitHubApiRepository {
   }
 
   async getOwners(personalAccessToken: string): Promise<GitHubApiOwner[]> {
-    const response = await fetch(`${this.baseUrl}/user/orgs?per_page=100`, {
+    const url = `${this.baseUrl}/user/orgs?per_page=100`
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'
       }
+    })
+
+    logGitHubApiRequest({
+      method: 'GET',
+      url,
+      status: response.status,
+      headers: response.headers
     })
 
     if (!response.ok) {
@@ -195,12 +221,20 @@ export class GitHubApiRepository {
   }
 
   async getUserRepositories(personalAccessToken: string): Promise<GitHubApiRepositoryModel[]> {
-    const response = await fetch(`${this.baseUrl}/user/repos?affiliation=owner&per_page=100`, {
+    const url = `${this.baseUrl}/user/repos?affiliation=owner&per_page=100`
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'
       }
+    })
+
+    logGitHubApiRequest({
+      method: 'GET',
+      url,
+      status: response.status,
+      headers: response.headers
     })
 
     if (!response.ok) {
@@ -219,12 +253,20 @@ export class GitHubApiRepository {
     personalAccessToken: string,
     ownerLogin: string
   ): Promise<GitHubApiRepositoryModel[]> {
-    const response = await fetch(`${this.baseUrl}/orgs/${ownerLogin}/repos?per_page=100`, {
+    const url = `${this.baseUrl}/orgs/${ownerLogin}/repos?per_page=100`
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28'
       }
+    })
+
+    logGitHubApiRequest({
+      method: 'GET',
+      url,
+      status: response.status,
+      headers: response.headers
     })
 
     if (!response.ok) {
@@ -334,7 +376,8 @@ export class GitHubApiRepository {
       }
     `
 
-    const response = await fetch(`${this.baseUrl}/graphql`, {
+    const url = `${this.baseUrl}/graphql`
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${personalAccessToken}`,
@@ -342,6 +385,14 @@ export class GitHubApiRepository {
         Accept: 'application/vnd.github+json'
       },
       body: JSON.stringify({ query })
+    })
+
+    logGitHubApiRequest({
+      method: 'POST',
+      url,
+      status: response.status,
+      headers: response.headers,
+      isGraphQL: true
     })
 
     if (!response.ok) {
