@@ -10,14 +10,12 @@ type PullRequestsStore = {
   error: string | null
 
   // Actions
-  setPullRequests: (pullRequests: GitHubApiPullRequest[]) => void
-  setLoading: (loading: boolean) => void
-  setRefreshing: (refreshing: boolean) => void
-  setError: (error: string | null) => void
+  fetchPullRequests: (state: 'open' | 'closed', forceRefresh?: boolean) => Promise<void>
+  refreshPullRequests: (state: 'open' | 'closed') => Promise<void>
   clearPullRequests: () => void
 }
 
-const usePullRequestsStore = create<PullRequestsStore>((set) => ({
+const usePullRequests = create<PullRequestsStore>((set, get) => ({
   // Initial state
   pullRequests: [],
   loading: false,
@@ -26,25 +24,51 @@ const usePullRequestsStore = create<PullRequestsStore>((set) => ({
   error: null,
 
   // Actions
-  setPullRequests: (pullRequests: GitHubApiPullRequest[]) => {
-    set({
-      pullRequests,
-      lastFetchedAt: new Date(),
-      error: null
-    })
+  fetchPullRequests: async (state: 'open' | 'closed', forceRefresh: boolean = false) => {
+    const { pullRequests } = get()
+
+    // 既にデータがあり、強制リフレッシュでない場合はスキップ
+    if (pullRequests.length > 0 && !forceRefresh) {
+      return
+    }
+
+    set({ loading: true })
+    try {
+      const result = await window.api.github.getPullRequests(state)
+      if (result.success && result.data) {
+        set({
+          pullRequests: result.data as GitHubApiPullRequest[],
+          lastFetchedAt: new Date(),
+          error: null
+        })
+      } else {
+        set({ error: result.error || 'Failed to fetch pull requests' })
+      }
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Unknown error occurred' })
+    } finally {
+      set({ loading: false })
+    }
   },
 
-  setLoading: (loading: boolean) => {
-    set({ loading })
-  },
-
-  setRefreshing: (refreshing: boolean) => {
-    set({ refreshing })
-  },
-
-  setError: (error: string | null) => {
-    set({ error })
-    // エラーが発生してもpullRequestsは保持する（既存データを維持）
+  refreshPullRequests: async (state: 'open' | 'closed') => {
+    set({ refreshing: true })
+    try {
+      const result = await window.api.github.getPullRequests(state)
+      if (result.success && result.data) {
+        set({
+          pullRequests: result.data as GitHubApiPullRequest[],
+          lastFetchedAt: new Date(),
+          error: null
+        })
+      } else {
+        set({ error: result.error || 'Failed to fetch pull requests' })
+      }
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Unknown error occurred' })
+    } finally {
+      set({ refreshing: false })
+    }
   },
 
   clearPullRequests: () => {
@@ -56,54 +80,4 @@ const usePullRequestsStore = create<PullRequestsStore>((set) => ({
   }
 }))
 
-export default function usePullRequests() {
-  const store = usePullRequestsStore()
-
-  const fetchPullRequests = async (state: 'open' | 'closed', forceRefresh: boolean = false) => {
-    // 既にデータがあり、強制リフレッシュでない場合はスキップ
-    if (store.pullRequests.length > 0 && !forceRefresh) {
-      return
-    }
-
-    store.setLoading(true)
-    try {
-      const result = await window.api.github.getPullRequests(state)
-      if (result.success && result.data) {
-        store.setPullRequests(result.data as GitHubApiPullRequest[])
-      } else {
-        store.setError(result.error || 'Failed to fetch pull requests')
-      }
-    } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      store.setLoading(false)
-    }
-  }
-
-  const refreshPullRequests = async (state: 'open' | 'closed') => {
-    store.setRefreshing(true)
-    try {
-      const result = await window.api.github.getPullRequests(state)
-      if (result.success && result.data) {
-        store.setPullRequests(result.data as GitHubApiPullRequest[])
-      } else {
-        store.setError(result.error || 'Failed to fetch pull requests')
-      }
-    } catch (err) {
-      store.setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      store.setRefreshing(false)
-    }
-  }
-
-  return {
-    pullRequests: store.pullRequests,
-    loading: store.loading,
-    refreshing: store.refreshing,
-    lastFetchedAt: store.lastFetchedAt,
-    error: store.error,
-    fetchPullRequests,
-    refreshPullRequests,
-    clearPullRequests: store.clearPullRequests
-  }
-}
+export default usePullRequests

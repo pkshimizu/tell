@@ -31,6 +31,7 @@
     "@mui/material": "^7.3.5",
     "@tanstack/react-router": "^1.131.50",
     "dayjs": "^1.11.19",
+    "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.3.9",
     "react-hook-form": "^7.66.1",
