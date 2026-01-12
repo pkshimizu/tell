@@ -160,9 +160,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <GitHubIcon />
           <TText>Open Pull Requests</TText>
           {lastFetchedAt && (
-            <TText variant="caption">
-              (Last updated: {text.formatDateTime(lastFetchedAt) ?? ''})
-            </TText>
+            <TText variant="caption">(Last updated: {text.fromNow(lastFetchedAt) ?? ''})</TText>
           )}
         </TRow>
         <TRow align="center">
