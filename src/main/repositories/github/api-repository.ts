@@ -4,7 +4,10 @@ import {
   GitHubApiRepository as GitHubApiRepositoryModel,
   GitHubApiPullRequest,
   GitHubApiPullRequestReviewer,
-  GitHubPullRequestState
+  GitHubPullRequestState,
+  GitHubApiStatusChecks,
+  GitHubApiCheckRun,
+  GitHubApiCheckStatusState
 } from '@main/models/github'
 import { logGitHubApiRequest } from '@main/logger'
 
@@ -363,6 +366,31 @@ export class GitHubApiRepository {
                   body
                 }
               }
+
+              commits(last: 1) {
+                nodes {
+                  commit {
+                    statusCheckRollup {
+                      state
+                      contexts(first: 50) {
+                        nodes {
+                          ... on CheckRun {
+                            __typename
+                            name
+                            status
+                            conclusion
+                          }
+                          ... on StatusContext {
+                            __typename
+                            context
+                            state
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -494,6 +522,54 @@ export class GitHubApiRepository {
           }
         }
 
+        // Status Checks情報を処理
+        let statusChecks: GitHubApiStatusChecks | null = null
+        const lastCommit = pr.commits?.nodes?.[0]?.commit
+        const statusCheckRollup = lastCommit?.statusCheckRollup
+
+        if (statusCheckRollup) {
+          // GraphQL stateを内部の型にマッピング
+          const stateMap: Record<string, GitHubApiCheckStatusState> = {
+            SUCCESS: 'success',
+            FAILURE: 'failure',
+            PENDING: 'pending',
+            EXPECTED: 'pending',
+            ERROR: 'failure'
+          }
+          const state: GitHubApiCheckStatusState = stateMap[statusCheckRollup.state] || 'pending'
+
+          const checks: GitHubApiCheckRun[] = []
+          if (statusCheckRollup.contexts?.nodes) {
+            for (const context of statusCheckRollup.contexts.nodes) {
+              if (!context) continue
+
+              if (context.__typename === 'CheckRun') {
+                checks.push({
+                  name: context.name,
+                  status: context.status?.toLowerCase() as GitHubApiCheckRun['status'],
+                  conclusion: context.conclusion?.toLowerCase() as GitHubApiCheckRun['conclusion']
+                })
+              } else if (context.__typename === 'StatusContext') {
+                // StatusContextをCheckRunの形式に変換
+                const statusStateMap: Record<string, GitHubApiCheckRun['conclusion']> = {
+                  SUCCESS: 'success',
+                  FAILURE: 'failure',
+                  PENDING: null,
+                  ERROR: 'failure',
+                  EXPECTED: null
+                }
+                checks.push({
+                  name: context.context,
+                  status: context.state === 'PENDING' ? 'in_progress' : 'completed',
+                  conclusion: statusStateMap[context.state] || null
+                })
+              }
+            }
+          }
+
+          statusChecks = { state, checks }
+        }
+
         const pullRequest: GitHubApiPullRequest = {
           id: pr.id,
           owner: {
@@ -524,7 +600,8 @@ export class GitHubApiRepository {
           createdAt: pr.createdAt,
           updatedAt: pr.updatedAt,
           sourceBranch: pr.headRefName,
-          targetBranch: pr.baseRefName
+          targetBranch: pr.baseRefName,
+          statusChecks
         }
 
         pullRequests.push(pullRequest)

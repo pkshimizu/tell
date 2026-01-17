@@ -5,7 +5,11 @@ import CheckIcon from '@renderer/components/display/icons/check'
 import TGridItem from '@renderer/components/layout/grid-item'
 import TAvatar from '@renderer/components/display/avatar'
 import TBox from '@renderer/components/display/box'
-import { GitHubApiPullRequest, GitHubApiPullRequestReviewStatus } from '@renderer/types/github'
+import {
+  GitHubApiPullRequest,
+  GitHubApiPullRequestReviewStatus,
+  GitHubApiCheckRun
+} from '@renderer/types/github'
 import useText from '@renderer/hooks/text'
 import TGridContents from '@renderer/components/layout/grid-contents'
 import CommentIcon from '@renderer/components/display/icons/comment'
@@ -13,6 +17,8 @@ import AttentionIcon from '@renderer/components/display/icons/attention'
 import PendingIcon from '@renderer/components/display/icons/pending'
 import DismissedIcon from '@renderer/components/display/icons/dismissed'
 import QuestionIcon from '@renderer/components/display/icons/question'
+import CloseIcon from '@renderer/components/display/icons/close'
+import LoadingIcon from '@renderer/components/display/icons/loading'
 import TLink from '@renderer/components/navigation/link'
 import TBranchArrow from '@renderer/components/display/branch-arrow'
 
@@ -39,6 +45,22 @@ function ReviewStatusIcon({ status }: { status: GitHubApiPullRequestReviewStatus
   return <QuestionIcon />
 }
 
+function CheckRunStatusIcon({ check }: { check: GitHubApiCheckRun }) {
+  if (check.status === 'in_progress' || check.status === 'queued') {
+    return <LoadingIcon size={14} color={'info'} />
+  }
+  if (check.conclusion === 'success') {
+    return <CheckIcon size={14} color={'success'} />
+  }
+  if (check.conclusion === 'failure') {
+    return <CloseIcon size={14} color={'error'} />
+  }
+  if (check.conclusion === 'skipped' || check.conclusion === 'neutral') {
+    return <DismissedIcon size={14} />
+  }
+  return <PendingIcon size={14} color={'warning'} />
+}
+
 export default function GitHubPullRequestView({ pullRequest }: Props) {
   const text = useText()
   return (
@@ -53,6 +75,16 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
               sourceBranch={pullRequest.sourceBranch}
               targetBranch={pullRequest.targetBranch}
             />
+            {pullRequest.statusChecks && pullRequest.statusChecks.checks.length > 0 && (
+              <TRow gap={1} align={'center'}>
+                {pullRequest.statusChecks.checks.map((check, index) => (
+                  <TRow key={`${check.name}-${index}`} align={'center'} gap={0.5}>
+                    <CheckRunStatusIcon check={check} />
+                    <TText variant={'caption'}>{check.name}</TText>
+                  </TRow>
+                ))}
+              </TRow>
+            )}
             <TRow gap={1}>
               <TText variant={'caption'}>{text.fromNow(pullRequest.createdAt)} created</TText>
               <TText variant={'caption'}>/</TText>
