@@ -41,6 +41,11 @@ const api = {
           ownerLogin,
           repositoryName
         )
+    },
+    pullRequests: {
+      get: () => ipcRenderer.invoke('settings:pullRequests:get'),
+      set: (sortBy: 'createdAt' | 'updatedAt' | 'author', sortOrder: 'asc' | 'desc') =>
+        ipcRenderer.invoke('settings:pullRequests:set', sortBy, sortOrder)
     }
   },
   app: {

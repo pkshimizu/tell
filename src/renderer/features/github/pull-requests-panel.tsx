@@ -107,7 +107,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const elapsedSecondsRef = useRef(0)
 
-  const { control, watch } = useForm<FilterFormData>({
+  const { control, watch, setValue } = useForm<FilterFormData>({
     defaultValues: {
       filterMyPRs: true,
       sortBy: 'updatedAt',
@@ -118,6 +118,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const filterMyPRs = watch('filterMyPRs')
   const sortBy = watch('sortBy')
   const sortOrder = watch('sortOrder')
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false)
 
   const sortKeyItems = [
     { value: 'createdAt', label: 'Created' },
@@ -152,6 +153,26 @@ export default function GitHubPullRequestsPanel(props: Props) {
       }
     })()
   }, [])
+
+  // ソート設定の読み込み
+  useEffect(() => {
+    ;(async () => {
+      const result = await window.api.settings.pullRequests.get()
+      if (result.success && result.data) {
+        setValue('sortBy', result.data.sortBy)
+        setValue('sortOrder', result.data.sortOrder)
+      }
+      setIsSettingsLoaded(true)
+    })()
+  }, [setValue])
+
+  // ソート設定の保存
+  useEffect(() => {
+    if (!isSettingsLoaded) return
+    ;(async () => {
+      await window.api.settings.pullRequests.set(sortBy, sortOrder)
+    })()
+  }, [sortBy, sortOrder, isSettingsLoaded])
 
   // エラーメッセージの表示
   useEffect(() => {
