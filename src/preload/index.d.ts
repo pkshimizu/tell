@@ -29,6 +29,24 @@ interface GitHubAPI {
   }>
 }
 
+type SortKey = 'createdAt' | 'updatedAt' | 'author'
+type SortOrder = 'asc' | 'desc'
+
+interface SettingsPullRequestsAPI {
+  get: () => Promise<{
+    success: boolean
+    data?: { sortBy: SortKey; sortOrder: SortOrder }
+    error?: string
+  }>
+  set: (
+    sortBy: SortKey,
+    sortOrder: SortOrder
+  ) => Promise<{
+    success: boolean
+    error?: string
+  }>
+}
+
 interface SettingsGitHubAPI {
   addAccount: (personalAccessToken: string) => Promise<{
     success: boolean
@@ -98,6 +116,7 @@ interface API {
   github: GitHubAPI
   settings: {
     github: SettingsGitHubAPI
+    pullRequests: SettingsPullRequestsAPI
   }
   app: AppAPI
   theme: ThemeAPI

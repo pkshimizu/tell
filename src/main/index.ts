@@ -381,6 +381,32 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Pull Requests Settings IPC handlers
+  ipcMain.handle('settings:pullRequests:get', async () => {
+    try {
+      const store = getStore()
+      const settings = store.get('settings.pullRequests')
+      return { success: true, data: settings }
+    } catch (error) {
+      console.error('Failed to get pull requests settings:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
+  })
+
+  ipcMain.handle(
+    'settings:pullRequests:set',
+    async (_, sortBy: 'createdAt' | 'updatedAt' | 'author', sortOrder: 'asc' | 'desc') => {
+      try {
+        const store = getStore()
+        store.set('settings.pullRequests', { sortBy, sortOrder })
+        return { success: true }
+      } catch (error) {
+        console.error('Failed to set pull requests settings:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+      }
+    }
+  )
+
   // Debug Store IPC handlers (開発モードのみ)
   if (is.dev) {
     // electron-storeの全データを取得

@@ -1,4 +1,5 @@
 import type { WindowState } from '../window'
+import type { StoreSettingsPullRequests } from './pull-requests'
 import type { StoreSettingsTheme } from './theme'
 
 /**
@@ -47,6 +48,7 @@ export interface StoreSchema {
   settings: {
     github: StoreSettingsGitHub
     theme: StoreSettingsTheme
+    pullRequests: StoreSettingsPullRequests
   }
   window?: WindowState
 }

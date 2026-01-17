@@ -25,6 +25,10 @@ export async function initializeStore(): Promise<Store<StoreSchema>> {
         },
         theme: {
           mode: 'system' // デフォルトはシステム連動
+        },
+        pullRequests: {
+          sortBy: 'updatedAt',
+          sortOrder: 'desc'
         }
       }
     }

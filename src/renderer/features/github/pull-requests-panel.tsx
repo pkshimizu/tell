@@ -18,6 +18,7 @@ import { IoRefresh } from 'react-icons/io5'
 import useMessage from '@renderer/hooks/message'
 import usePullRequests from '@renderer/hooks/pull-requests'
 import TCheckbox from '@renderer/components/form/checkbox'
+import TSelect from '@renderer/components/form/select'
 import { useForm } from 'react-hook-form'
 import useText from '@renderer/hooks/text'
 
@@ -27,8 +28,13 @@ type Props = {
   state: 'open' | 'closed'
 }
 
+type SortKey = 'createdAt' | 'updatedAt' | 'author'
+type SortOrder = 'asc' | 'desc'
+
 type FilterFormData = {
   filterMyPRs: boolean
+  sortBy: SortKey
+  sortOrder: SortOrder
 }
 
 type OwnerRepositories = {
@@ -40,6 +46,28 @@ type RepositoryPullRequests = {
   owner: GitHubOwner
   repository: GitHubRepository
   pullRequests: GitHubApiPullRequest[]
+}
+
+function sortPullRequests(
+  pullRequests: GitHubApiPullRequest[],
+  sortBy: SortKey,
+  sortOrder: SortOrder
+): GitHubApiPullRequest[] {
+  return [...pullRequests].sort((a, b) => {
+    let comparison = 0
+    switch (sortBy) {
+      case 'createdAt':
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        break
+      case 'updatedAt':
+        comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+        break
+      case 'author':
+        comparison = a.author.name.localeCompare(b.author.name)
+        break
+    }
+    return sortOrder === 'asc' ? comparison : -comparison
+  })
 }
 
 function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerRepositories[] {
@@ -79,13 +107,29 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const elapsedSecondsRef = useRef(0)
 
-  const { control, watch } = useForm<FilterFormData>({
+  const { control, watch, setValue } = useForm<FilterFormData>({
     defaultValues: {
-      filterMyPRs: true
+      filterMyPRs: true,
+      sortBy: 'updatedAt',
+      sortOrder: 'desc'
     }
   })
 
   const filterMyPRs = watch('filterMyPRs')
+  const sortBy = watch('sortBy')
+  const sortOrder = watch('sortOrder')
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false)
+
+  const sortKeyItems = [
+    { value: 'createdAt', label: 'Created' },
+    { value: 'updatedAt', label: 'Updated' },
+    { value: 'author', label: 'Author' }
+  ]
+
+  const sortOrderItems = [
+    { value: 'desc', label: 'Desc' },
+    { value: 'asc', label: 'Asc' }
+  ]
 
   const resetTimer = useCallback(() => {
     elapsedSecondsRef.current = 0
@@ -109,6 +153,26 @@ export default function GitHubPullRequestsPanel(props: Props) {
       }
     })()
   }, [])
+
+  // ソート設定の読み込み
+  useEffect(() => {
+    ;(async () => {
+      const result = await window.api.settings.pullRequests.get()
+      if (result.success && result.data) {
+        setValue('sortBy', result.data.sortBy)
+        setValue('sortOrder', result.data.sortOrder)
+      }
+      setIsSettingsLoaded(true)
+    })()
+  }, [setValue])
+
+  // ソート設定の保存
+  useEffect(() => {
+    if (!isSettingsLoaded) return
+    ;(async () => {
+      await window.api.settings.pullRequests.set(sortBy, sortOrder)
+    })()
+  }, [sortBy, sortOrder, isSettingsLoaded])
 
   // エラーメッセージの表示
   useEffect(() => {
@@ -153,6 +217,9 @@ export default function GitHubPullRequestsPanel(props: Props) {
       })
     : pullRequests
 
+  // ソート処理
+  const sortedPullRequests = sortPullRequests(filteredPullRequests, sortBy, sortOrder)
+
   return (
     <TColumn gap={1}>
       <TRow align="center" justify="space-between">
@@ -163,8 +230,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
             <TText variant="caption">(Last updated: {text.fromNow(lastFetchedAt) ?? ''})</TText>
           )}
         </TRow>
-        <TRow align="center">
+        <TRow align="center" gap={2}>
           <TCheckbox name="filterMyPRs" control={control} label="Only my PRs" />
+          <TRow align="center" gap={1}>
+            <TSelect name="sortBy" control={control} items={sortKeyItems} />
+            <TSelect name="sortOrder" control={control} items={sortOrderItems} />
+          </TRow>
           <TColumn align="center">
             <TIconButton onClick={handleRefresh} disabled={refreshing}>
               {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
@@ -183,11 +254,11 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
         </TColumn>
-      ) : filteredPullRequests.length === 0 ? (
+      ) : sortedPullRequests.length === 0 ? (
         <TAlert severity={'info'}>No pull requests</TAlert>
       ) : (
         <>
-          {groupingPullRequests(filteredPullRequests).map((owner) =>
+          {groupingPullRequests(sortedPullRequests).map((owner) =>
             Array.from(owner.repositories.values()).map((repository) => (
               <TColumn key={repository.repository.htmlUrl} gap={1}>
                 <TRow gap={1}>
