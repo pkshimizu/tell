@@ -38,6 +38,31 @@ export type GitHubApiPullRequestReviewStatus =
   | 'pending'
   | 'dismissed'
 
+export type GitHubApiCheckStatusState = 'success' | 'failure' | 'pending' | 'in_progress'
+
+export type GitHubApiCheckRunStatus = 'queued' | 'in_progress' | 'completed'
+
+export type GitHubApiCheckRunConclusion =
+  | 'success'
+  | 'failure'
+  | 'neutral'
+  | 'cancelled'
+  | 'skipped'
+  | 'timed_out'
+  | 'action_required'
+  | null
+
+export interface GitHubApiCheckRun {
+  name: string
+  status: GitHubApiCheckRunStatus
+  conclusion: GitHubApiCheckRunConclusion
+}
+
+export interface GitHubApiStatusChecks {
+  state: GitHubApiCheckStatusState
+  checks: GitHubApiCheckRun[]
+}
+
 export interface GitHubApiPullRequestReviewer {
   name: string
   htmlUrl: string
@@ -59,4 +84,5 @@ export interface GitHubApiPullRequest {
   updatedAt: string
   sourceBranch: string
   targetBranch: string
+  statusChecks: GitHubApiStatusChecks | null
 }
