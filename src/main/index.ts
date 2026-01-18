@@ -341,6 +341,17 @@ app.whenReady().then(async () => {
       }
     }
   )
+  ipcMain.handle('settings:github:getAllRegisteredRepositories', async () => {
+    try {
+      const repositories = settingsService.getAllRegisteredRepositories()
+      return { success: true, data: repositories }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
   ipcMain.handle('github:getPullRequests', async (_, state: 'open' | 'closed') => {
     try {
       const pullRequests = await githubService.getPullRequests(state)

@@ -40,7 +40,9 @@ const api = {
           accountId,
           ownerLogin,
           repositoryName
-        )
+        ),
+      getAllRegisteredRepositories: () =>
+        ipcRenderer.invoke('settings:github:getAllRegisteredRepositories')
     },
     pullRequests: {
       get: () => ipcRenderer.invoke('settings:pullRequests:get'),

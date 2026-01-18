@@ -127,6 +127,25 @@ export class SettingsService {
     // リポジトリを削除
     githubStoreRepository.deleteRepository(accountId, ownerLogin, repositoryName)
   }
+
+  /**
+   * 全ての登録済みリポジトリを取得する
+   * @returns 登録済みリポジトリのリスト（owner/repo形式）
+   */
+  getAllRegisteredRepositories(): Array<{
+    accountId: string
+    ownerLogin: string
+    repositoryName: string
+    repositoryHtmlUrl: string
+  }> {
+    const allRepositories = githubStoreRepository.getAllRepositories()
+    return allRepositories.map(({ account, owner, repository }) => ({
+      accountId: account.id,
+      ownerLogin: owner.login,
+      repositoryName: repository.name,
+      repositoryHtmlUrl: repository.htmlUrl
+    }))
+  }
 }
 
 export const settingsService = new SettingsService()

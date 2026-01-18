@@ -2,21 +2,41 @@ import TGrid from '@renderer/components/layout/grid'
 import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import TLink from '@renderer/components/navigation/link'
-import { TColumn } from '@renderer/components/layout/flex-box'
-import { useState } from 'react'
+import { TColumn, TRow } from '@renderer/components/layout/flex-box'
+import { useEffect, useState } from 'react'
 import { GitHubAccount } from '@renderer/types/github'
 import useText from '@renderer/hooks/text'
 import TButton from '@renderer/components/form/button'
 import GitHubRepositorySelectDialog from './repository-select-dialog'
+import GitHubIcon from '@renderer/components/display/icons/github'
 
 interface Props {
   accounts: GitHubAccount[]
 }
 
+interface RegisteredRepository {
+  accountId: string
+  ownerLogin: string
+  repositoryName: string
+  repositoryHtmlUrl: string
+}
+
 export default function GitHubAccountTable({ accounts }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
+  const [repositories, setRepositories] = useState<RegisteredRepository[]>([])
   const text = useText()
+
+  const loadRepositories = async () => {
+    const result = await window.api.settings.github.getAllRegisteredRepositories()
+    if (result.success && result.data) {
+      setRepositories(result.data)
+    }
+  }
+
+  useEffect(() => {
+    loadRepositories()
+  }, [])
 
   const handleOpenDialog = (accountId: number) => {
     setSelectedAccountId(accountId)
@@ -26,35 +46,54 @@ export default function GitHubAccountTable({ accounts }: Props) {
   const handleCloseDialog = () => {
     setDialogOpen(false)
     setSelectedAccountId(null)
+    loadRepositories()
+  }
+
+  const getAccountRepositories = (accountId: number) => {
+    return repositories.filter((repo) => repo.accountId === String(accountId))
   }
 
   return (
     <>
-      <TColumn>
+      <TColumn gap={2}>
         {accounts.map((account) => (
-          <TGrid
-            key={account.id}
-            columns={['56px', '1fr', '160px', '120px']}
-            gap={2}
-            alignItems={'center'}
-          >
-            {account.avatarUrl ? (
-              <TAvatar url={account.avatarUrl} alt={account.login} size={56} />
-            ) : (
-              <TAvatar alt={account.login} size={56} />
+          <TColumn key={account.id} gap={1}>
+            <TGrid columns={['56px', '1fr', '160px', '120px']} gap={2} alignItems={'center'}>
+              {account.avatarUrl ? (
+                <TAvatar url={account.avatarUrl} alt={account.login} size={56} />
+              ) : (
+                <TAvatar alt={account.login} size={56} />
+              )}
+              <TColumn>
+                <TLink href={account.htmlUrl}>
+                  <TText variant="subtitle">{account.login}</TText>
+                </TLink>
+                {account.name && <TText>{account.name}</TText>}
+              </TColumn>
+              <TColumn>
+                <TText>Expires date</TText>
+                <TText>{text.formatDateTime(account.expiredAt) ?? 'No expires'}</TText>
+              </TColumn>
+              <TButton onClick={() => handleOpenDialog(account.id)}>Repositories</TButton>
+            </TGrid>
+            {getAccountRepositories(account.id).length > 0 && (
+              <TColumn gap={0.5}>
+                {getAccountRepositories(account.id).map((repo) => (
+                  <TLink
+                    key={`${repo.ownerLogin}/${repo.repositoryName}`}
+                    href={repo.repositoryHtmlUrl}
+                  >
+                    <TRow align={'center'} gap={0.5}>
+                      <GitHubIcon size={20} />
+                      <TText>
+                        {repo.ownerLogin}/{repo.repositoryName}
+                      </TText>
+                    </TRow>
+                  </TLink>
+                ))}
+              </TColumn>
             )}
-            <TColumn>
-              <TLink href={account.htmlUrl}>
-                <TText variant="subtitle">{account.login}</TText>
-              </TLink>
-              {account.name && <TText>{account.name}</TText>}
-            </TColumn>
-            <TColumn>
-              <TText>Expires date</TText>
-              <TText>{text.formatDateTime(account.expiredAt) ?? 'No expires'}</TText>
-            </TColumn>
-            <TButton onClick={() => handleOpenDialog(account.id)}>Repositories</TButton>
-          </TGrid>
+          </TColumn>
         ))}
       </TColumn>
       <GitHubRepositorySelectDialog
