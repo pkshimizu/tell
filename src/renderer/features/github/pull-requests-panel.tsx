@@ -22,7 +22,7 @@ import TSelect from '@renderer/components/form/select'
 import { useForm } from 'react-hook-form'
 import useText from '@renderer/hooks/text'
 
-const AUTO_RELOAD_INTERVAL_SECONDS = 5 * 60 // 5分
+type ReloadInterval = 1 | 3 | 5 | 10 | 15
 
 type Props = {
   state: 'open' | 'closed'
@@ -106,6 +106,8 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const elapsedSecondsRef = useRef(0)
+  const [reloadInterval, setReloadInterval] = useState<ReloadInterval>(5)
+  const reloadIntervalSeconds = reloadInterval * 60
 
   const { control, watch, setValue } = useForm<FilterFormData>({
     defaultValues: {
@@ -161,6 +163,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
       if (result.success && result.data) {
         setValue('sortBy', result.data.sortBy)
         setValue('sortOrder', result.data.sortOrder)
+        setReloadInterval(result.data.reloadInterval ?? 5)
       }
       setIsSettingsLoaded(true)
     })()
@@ -170,9 +173,9 @@ export default function GitHubPullRequestsPanel(props: Props) {
   useEffect(() => {
     if (!isSettingsLoaded) return
     ;(async () => {
-      await window.api.settings.pullRequests.set(sortBy, sortOrder)
+      await window.api.settings.pullRequests.set(sortBy, sortOrder, reloadInterval)
     })()
-  }, [sortBy, sortOrder, isSettingsLoaded])
+  }, [sortBy, sortOrder, reloadInterval, isSettingsLoaded])
 
   // エラーメッセージの表示
   useEffect(() => {
@@ -188,12 +191,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
       setIsInitialLoad(false)
     }
 
-    // 1秒ごとにプログレスバーを更新し、5分経過で自動リロード
+    // 1秒ごとにプログレスバーを更新し、設定した間隔で自動リロード
     const intervalId = setInterval(() => {
       elapsedSecondsRef.current += 1
       setElapsedSeconds(elapsedSecondsRef.current)
 
-      if (elapsedSecondsRef.current >= AUTO_RELOAD_INTERVAL_SECONDS) {
+      if (elapsedSecondsRef.current >= reloadIntervalSeconds) {
         void refreshPullRequests(props.state)
         elapsedSecondsRef.current = 0
         setElapsedSeconds(0)
@@ -204,7 +207,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
     return () => {
       clearInterval(intervalId)
     }
-  }, [props.state, fetchPullRequests, refreshPullRequests, isInitialLoad])
+  }, [props.state, fetchPullRequests, refreshPullRequests, isInitialLoad, reloadIntervalSeconds])
 
   // 自分が作成者、assignee、またはreviewerに含まれているPRのみをフィルタリング
   const filteredPullRequests = filterMyPRs
@@ -241,7 +244,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
               {refreshing ? <TCircularProgress size={24} /> : <IoRefresh size={24} />}
             </TIconButton>
             <TLinearProgress
-              value={100 - (elapsedSeconds / AUTO_RELOAD_INTERVAL_SECONDS) * 100}
+              value={100 - (elapsedSeconds / reloadIntervalSeconds) * 100}
               width={40}
               height={3}
             />

@@ -28,7 +28,8 @@ export async function initializeStore(): Promise<Store<StoreSchema>> {
         },
         pullRequests: {
           sortBy: 'updatedAt',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
+          reloadInterval: 5
         }
       }
     }

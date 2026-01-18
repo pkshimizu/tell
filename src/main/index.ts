@@ -406,10 +406,15 @@ app.whenReady().then(async () => {
 
   ipcMain.handle(
     'settings:pullRequests:set',
-    async (_, sortBy: 'createdAt' | 'updatedAt' | 'author', sortOrder: 'asc' | 'desc') => {
+    async (
+      _,
+      sortBy: 'createdAt' | 'updatedAt' | 'author',
+      sortOrder: 'asc' | 'desc',
+      reloadInterval: 1 | 3 | 5 | 10 | 15
+    ) => {
       try {
         const store = getStore()
-        store.set('settings.pullRequests', { sortBy, sortOrder })
+        store.set('settings.pullRequests', { sortBy, sortOrder, reloadInterval })
         return { success: true }
       } catch (error) {
         console.error('Failed to set pull requests settings:', error)
