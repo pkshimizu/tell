@@ -7,8 +7,10 @@ import { useEffect, useState } from 'react'
 import { GitHubAccount } from '@renderer/types/github'
 import useText from '@renderer/hooks/text'
 import TButton from '@renderer/components/form/button'
+import TIconButton from '@renderer/components/form/icon-button'
 import GitHubRepositorySelectDialog from './repository-select-dialog'
 import GitHubIcon from '@renderer/components/display/icons/github'
+import CloseIcon from '@renderer/components/display/icons/close'
 
 interface Props {
   accounts: GitHubAccount[]
@@ -53,6 +55,21 @@ export default function GitHubAccountTable({ accounts }: Props) {
     return repositories.filter((repo) => repo.accountId === String(accountId))
   }
 
+  const handleRemoveRepository = async (
+    accountId: number,
+    ownerLogin: string,
+    repositoryName: string
+  ) => {
+    const result = await window.api.settings.github.removeRepository(
+      accountId,
+      ownerLogin,
+      repositoryName
+    )
+    if (result.success) {
+      loadRepositories()
+    }
+  }
+
   return (
     <>
       <TColumn gap={2}>
@@ -79,17 +96,27 @@ export default function GitHubAccountTable({ accounts }: Props) {
             {getAccountRepositories(account.id).length > 0 && (
               <TColumn gap={0.5}>
                 {getAccountRepositories(account.id).map((repo) => (
-                  <TLink
+                  <TRow
                     key={`${repo.ownerLogin}/${repo.repositoryName}`}
-                    href={repo.repositoryHtmlUrl}
+                    align={'center'}
+                    gap={0.5}
                   >
-                    <TRow align={'center'} gap={0.5}>
-                      <GitHubIcon size={20} />
-                      <TText>
-                        {repo.ownerLogin}/{repo.repositoryName}
-                      </TText>
-                    </TRow>
-                  </TLink>
+                    <TLink href={repo.repositoryHtmlUrl}>
+                      <TRow align={'center'} gap={0.5}>
+                        <GitHubIcon size={20} />
+                        <TText>
+                          {repo.ownerLogin}/{repo.repositoryName}
+                        </TText>
+                      </TRow>
+                    </TLink>
+                    <TIconButton
+                      onClick={() =>
+                        handleRemoveRepository(account.id, repo.ownerLogin, repo.repositoryName)
+                      }
+                    >
+                      <CloseIcon size={16} />
+                    </TIconButton>
+                  </TRow>
                 ))}
               </TColumn>
             )}
