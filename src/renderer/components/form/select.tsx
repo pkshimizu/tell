@@ -37,7 +37,7 @@ export default function TSelect<T extends FieldValues>(props: Props<T>) {
             }}
           >
             <MenuItem value={''} disabled>
-              選択してください
+              Please select
             </MenuItem>
             {props.items.map((item) => (
               <MenuItem key={item.value} value={item.value}>

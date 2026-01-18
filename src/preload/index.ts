@@ -46,8 +46,11 @@ const api = {
     },
     pullRequests: {
       get: () => ipcRenderer.invoke('settings:pullRequests:get'),
-      set: (sortBy: 'createdAt' | 'updatedAt' | 'author', sortOrder: 'asc' | 'desc') =>
-        ipcRenderer.invoke('settings:pullRequests:set', sortBy, sortOrder)
+      set: (
+        sortBy: 'createdAt' | 'updatedAt' | 'author',
+        sortOrder: 'asc' | 'desc',
+        reloadInterval: 1 | 3 | 5 | 10 | 15
+      ) => ipcRenderer.invoke('settings:pullRequests:set', sortBy, sortOrder, reloadInterval)
     }
   },
   app: {

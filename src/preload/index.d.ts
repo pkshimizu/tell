@@ -31,16 +31,18 @@ interface GitHubAPI {
 
 type SortKey = 'createdAt' | 'updatedAt' | 'author'
 type SortOrder = 'asc' | 'desc'
+type ReloadInterval = 1 | 3 | 5 | 10 | 15
 
 interface SettingsPullRequestsAPI {
   get: () => Promise<{
     success: boolean
-    data?: { sortBy: SortKey; sortOrder: SortOrder }
+    data?: { sortBy: SortKey; sortOrder: SortOrder; reloadInterval: ReloadInterval }
     error?: string
   }>
   set: (
     sortBy: SortKey,
-    sortOrder: SortOrder
+    sortOrder: SortOrder,
+    reloadInterval: ReloadInterval
   ) => Promise<{
     success: boolean
     error?: string
