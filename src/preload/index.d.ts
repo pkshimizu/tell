@@ -86,6 +86,16 @@ interface SettingsGitHubAPI {
     success: boolean
     error?: string
   }>
+  getAllRegisteredRepositories: () => Promise<{
+    success: boolean
+    data?: Array<{
+      accountId: string
+      ownerLogin: string
+      repositoryName: string
+      repositoryHtmlUrl: string
+    }>
+    error?: string
+  }>
 }
 
 interface AppAPI {
