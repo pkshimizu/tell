@@ -21,9 +21,28 @@ import CloseIcon from '@renderer/components/display/icons/close'
 import LoadingIcon from '@renderer/components/display/icons/loading'
 import TLink from '@renderer/components/navigation/link'
 import TBranchArrow from '@renderer/components/display/branch-arrow'
+import type { ThemeColor } from '@renderer/types/color'
 
 type Props = {
   pullRequest: GitHubApiPullRequest
+}
+
+function getUpdateTimeColor(updatedAt: string): ThemeColor {
+  const now = new Date()
+  const updated = new Date(updatedAt)
+  const diffMs = now.getTime() - updated.getTime()
+  const diffMinutes = diffMs / (1000 * 60)
+
+  if (diffMinutes <= 10) {
+    return 'success'
+  }
+  if (diffMinutes <= 4 * 60) {
+    return 'warning'
+  }
+  if (diffMinutes <= 24 * 60) {
+    return 'error'
+  }
+  return 'critical'
 }
 
 function ReviewStatusIcon({ status }: { status: GitHubApiPullRequestReviewStatus }) {
@@ -88,7 +107,9 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
             <TRow gap={1}>
               <TText variant={'caption'}>{text.fromNow(pullRequest.createdAt)} created</TText>
               <TText variant={'caption'}>/</TText>
-              <TText variant={'caption'}>{text.fromNow(pullRequest.updatedAt)} updated</TText>
+              <TText variant={'caption'} color={getUpdateTimeColor(pullRequest.updatedAt)}>
+                {text.fromNow(pullRequest.updatedAt)} updated
+              </TText>
             </TRow>
           </TColumn>
         </TGridItem>

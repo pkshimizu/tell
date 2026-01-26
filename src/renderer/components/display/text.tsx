@@ -1,4 +1,6 @@
 import { Typography } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import type { ThemeColor } from '@renderer/types/color'
 
 type Text = string | number | Text[]
 type Variant = 'caption' | 'body' | 'subtitle' | 'title' | 'headline'
@@ -12,6 +14,7 @@ interface Props {
   overflow?: 'hidden' | 'visible' | 'scroll' | 'auto'
   fullWidth?: boolean
   fullHeight?: boolean
+  color?: ThemeColor
   children: Text
 }
 
@@ -35,6 +38,9 @@ function typographyVariant(variant?: Variant) {
 }
 
 export default function TText(props: Props) {
+  const theme = useTheme()
+  const textColor = props.color ? theme.palette[props.color].main : undefined
+
   return (
     <Typography
       variant={typographyVariant(props.variant)}
@@ -46,7 +52,8 @@ export default function TText(props: Props) {
         overflow: props.overflow,
         textOverflow: 'ellipsis',
         width: props.fullWidth ? '100%' : undefined,
-        height: props.fullHeight ? '100%' : undefined
+        height: props.fullHeight ? '100%' : undefined,
+        color: textColor
       }}
     >
       {props.children}
