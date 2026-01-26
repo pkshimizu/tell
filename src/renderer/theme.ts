@@ -4,9 +4,35 @@ import { createTheme, type Theme } from '@mui/material/styles'
 declare module '@mui/material/styles' {
   interface Palette {
     boxBackground: Palette['primary']
+    critical: Palette['primary']
   }
   interface PaletteOptions {
     boxBackground?: PaletteOptions['primary']
+    critical?: PaletteOptions['primary']
+  }
+}
+
+declare module '@mui/material/Chip' {
+  interface ChipPropsColorOverrides {
+    critical: true
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsColorOverrides {
+    critical: true
+  }
+}
+
+declare module '@mui/material/IconButton' {
+  interface IconButtonPropsColorOverrides {
+    critical: true
+  }
+}
+
+declare module '@mui/material/AppBar' {
+  interface AppBarPropsColorOverrides {
+    critical: true
   }
 }
 
@@ -55,6 +81,9 @@ export const lightTheme: Theme = createTheme({
     boxBackground: {
       main: '#e3f2fd'
     },
+    critical: {
+      main: '#9c27b0'
+    },
     background: {
       default: '#fafafa',
       paper: '#ffffff'
@@ -93,6 +122,9 @@ export const darkTheme: Theme = createTheme({
     },
     boxBackground: {
       main: '#1e1e1e'
+    },
+    critical: {
+      main: '#ba68c8'
     },
     background: {
       default: '#121212',
