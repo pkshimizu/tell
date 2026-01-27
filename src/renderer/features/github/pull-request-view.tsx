@@ -33,13 +33,13 @@ function getUpdateTimeColor(updatedAt: string): ThemeColor {
   const diffMs = now.getTime() - updated.getTime()
   const diffMinutes = diffMs / (1000 * 60)
 
-  if (diffMinutes <= 10) {
+  if (diffMinutes <= 60) {
     return 'success'
   }
-  if (diffMinutes <= 4 * 60) {
+  if (diffMinutes <= 24 * 60) {
     return 'warning'
   }
-  if (diffMinutes <= 24 * 60) {
+  if (diffMinutes <= 3 * 24 * 60) {
     return 'error'
   }
   return 'critical'
