@@ -18,8 +18,7 @@
     "postinstall": "electron-builder install-app-deps && npx @electron/rebuild",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win --publish never",
-    "build:mac": "npm run build && electron-builder --mac --publish never",
-    "build:linux": "electron-vite build && electron-builder --linux --publish never"
+    "build:mac": "npm run build && electron-builder --mac --publish never"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",

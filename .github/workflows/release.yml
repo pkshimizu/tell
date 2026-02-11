@@ -89,7 +89,7 @@ jobs:
         run: |
           $files = Get-ChildItem -Path dist -Filter *.exe
           foreach ($file in $files) {
-            gh release upload ${{ github.event.release.tag_name }} $file.FullName
+            gh release upload ${{ github.event.release.tag_name }} $file.FullName --clobber
           }
         env:
           GH_TOKEN: ${{ github.token }}
@@ -119,14 +119,14 @@ jobs:
         with:
           name: macos-build
           path: |
-            dist/*.dmg
+            dist/*.zip
           retention-days: 7
 
       - name: Upload to release
         run: |
-          for file in dist/*.dmg; do
+          for file in dist/*.zip; do
             if [ -f "$file" ]; then
-              gh release upload ${{ github.event.release.tag_name }} "$file"
+              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
             fi
           done
         env:
