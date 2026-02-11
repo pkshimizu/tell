@@ -101,7 +101,8 @@ export default function GitHubPullRequestsPanel(props: Props) {
     error,
     lastFetchedAt,
     fetchPullRequests,
-    refreshPullRequests
+    refreshPullRequests,
+    clearError
   } = usePullRequests()
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
   const [isInitialLoad, setIsInitialLoad] = useState(true)
@@ -192,10 +193,14 @@ export default function GitHubPullRequestsPanel(props: Props) {
   }, [error, message])
 
   const handleTokenExpiredDialogClose = () => {
+    clearError()
     setTokenExpiredDialogOpen(false)
   }
 
   const handleTokenUpdated = async () => {
+    // エラーをクリアしてダイアログを閉じる
+    clearError()
+    setTokenExpiredDialogOpen(false)
     // トークン更新後、アカウント情報を再読み込みしてプルリクエストを再取得
     const result = await window.api.settings.github.getAccounts()
     if (result.success && result.data) {

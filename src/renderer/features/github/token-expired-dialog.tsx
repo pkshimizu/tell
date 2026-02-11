@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import TDialog from '@renderer/components/feedback/dialog'
 import TFormItem from '@renderer/components/form/form-item'
@@ -38,14 +38,22 @@ export default function GitHubTokenExpiredDialog({
     handleSubmit,
     formState: { errors },
     reset,
-    control
+    control,
+    setValue
   } = useForm<FormData>({
     resolver: resolver.githubPersonalAccessTokenUpdate,
     defaultValues: {
-      accountId: accounts.length > 0 ? String(accounts[0].id) : '',
+      accountId: '',
       token: ''
     }
   })
+
+  // accountsが読み込まれたらaccountIdを設定
+  useEffect(() => {
+    if (accounts.length > 0) {
+      setValue('accountId', String(accounts[0].id))
+    }
+  }, [accounts, setValue])
 
   const accountItems = accounts.map((account) => ({
     value: String(account.id),
@@ -58,13 +66,13 @@ export default function GitHubTokenExpiredDialog({
     try {
       const result = await window.api.settings.github.updateAccountToken(data.accountId, data.token)
 
-      if (result.success && result.data) {
-        message.setMessage('success', `Token updated for ${result.data.login}`)
+      if (result.success) {
+        message.setMessage('success', `Token updated for ${result.data?.login ?? 'account'}`)
         reset()
+        onClose()
         if (onTokenUpdated) {
           onTokenUpdated()
         }
-        onClose()
       } else {
         message.setMessage('error', result.error || 'Failed to update token')
       }

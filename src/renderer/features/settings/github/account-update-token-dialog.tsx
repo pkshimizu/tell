@@ -51,10 +51,10 @@ export default function GitHubAccountUpdateTokenDialog({
         data.token
       )
 
-      if (result.success && result.data) {
+      if (result.success) {
         message.setMessage('success', `Token updated for ${account.login}`)
         reset()
-        if (onTokenUpdated) {
+        if (onTokenUpdated && result.data) {
           onTokenUpdated(result.data)
         }
         onClose()
