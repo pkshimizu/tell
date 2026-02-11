@@ -10,12 +10,15 @@ import TButton from '@renderer/components/form/button'
 import TIconButton from '@renderer/components/form/icon-button'
 import GitHubRepositorySelectDialog from './repository-select-dialog'
 import GitHubAccountUpdateTokenDialog from './account-update-token-dialog'
+import GitHubAccountDeleteDialog from './account-delete-dialog'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import CloseIcon from '@renderer/components/display/icons/close'
+import { IoTrash } from 'react-icons/io5'
 
 interface Props {
   accounts: GitHubAccount[]
   onAccountUpdated?: (account: GitHubAccount) => void
+  onAccountDeleted?: () => void
 }
 
 interface RegisteredRepository {
@@ -25,11 +28,19 @@ interface RegisteredRepository {
   repositoryHtmlUrl: string
 }
 
-export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props) {
+export default function GitHubAccountTable({
+  accounts,
+  onAccountUpdated,
+  onAccountDeleted
+}: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [updateTokenDialogOpen, setUpdateTokenDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
   const [selectedAccountForUpdate, setSelectedAccountForUpdate] = useState<GitHubAccount | null>(
+    null
+  )
+  const [selectedAccountForDelete, setSelectedAccountForDelete] = useState<GitHubAccount | null>(
     null
   )
   const [repositories, setRepositories] = useState<RegisteredRepository[]>([])
@@ -73,6 +84,23 @@ export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props
     }
   }
 
+  const handleOpenDeleteDialog = (account: GitHubAccount) => {
+    setSelectedAccountForDelete(account)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false)
+    setSelectedAccountForDelete(null)
+  }
+
+  const handleAccountDeleted = () => {
+    loadRepositories()
+    if (onAccountDeleted) {
+      onAccountDeleted()
+    }
+  }
+
   const getAccountRepositories = (accountId: number) => {
     return repositories.filter((repo) => repo.accountId === String(accountId))
   }
@@ -98,7 +126,7 @@ export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props
         {accounts.map((account) => (
           <TColumn key={account.id} gap={1}>
             <TGrid
-              columns={['56px', '1fr', '160px', '120px', '120px']}
+              columns={['56px', '1fr', '160px', '120px', '120px', '40px']}
               gap={2}
               alignItems={'center'}
             >
@@ -119,6 +147,9 @@ export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props
               </TColumn>
               <TButton onClick={() => handleOpenUpdateTokenDialog(account)}>Update Token</TButton>
               <TButton onClick={() => handleOpenDialog(account.id)}>Repositories</TButton>
+              <TIconButton onClick={() => handleOpenDeleteDialog(account)}>
+                <IoTrash size={20} />
+              </TIconButton>
             </TGrid>
             {getAccountRepositories(account.id).length > 0 && (
               <TColumn gap={0.5}>
@@ -160,6 +191,12 @@ export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props
         account={selectedAccountForUpdate}
         onClose={handleCloseUpdateTokenDialog}
         onTokenUpdated={handleTokenUpdated}
+      />
+      <GitHubAccountDeleteDialog
+        open={deleteDialogOpen}
+        account={selectedAccountForDelete}
+        onClose={handleCloseDeleteDialog}
+        onDeleted={handleAccountDeleted}
       />
     </>
   )

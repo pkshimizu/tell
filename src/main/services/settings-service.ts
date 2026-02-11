@@ -191,6 +191,22 @@ export class SettingsService {
 
     return updatedAccount
   }
+
+  /**
+   * GitHubアカウントを削除する
+   * @param accountId - GitHubアカウントID (UUID)
+   * @throws Error - アカウントが見つからない場合
+   */
+  deleteGitHubAccount(accountId: string): void {
+    // storeからアカウント情報を取得
+    const existingAccount = githubStoreRepository.findAccountById(accountId)
+    if (!existingAccount) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // アカウントを削除
+    githubStoreRepository.deleteAccount(accountId)
+  }
 }
 
 export const settingsService = new SettingsService()

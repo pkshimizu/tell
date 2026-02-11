@@ -85,6 +85,14 @@ function RouteComponent() {
     )
   }
 
+  const handleAccountDeleted = async () => {
+    // アカウント一覧を再読み込み
+    const result = await window.api.settings.github.getAccounts()
+    if (result.success && result.data) {
+      setAccounts(result.data)
+    }
+  }
+
   return (
     <TColumn gap={2} fullWidth>
       <TText variant="title">GitHub Settings</TText>
@@ -93,7 +101,11 @@ function RouteComponent() {
         <TSelect name="reloadInterval" control={control} items={reloadIntervalItems} />
       </TRow>
       <GitHubAccountCreateForm onAccountAdded={handleAccountAdded} />
-      <GitHubAccountTable accounts={accounts} onAccountUpdated={handleAccountUpdated} />
+      <GitHubAccountTable
+        accounts={accounts}
+        onAccountUpdated={handleAccountUpdated}
+        onAccountDeleted={handleAccountDeleted}
+      />
     </TColumn>
   )
 }

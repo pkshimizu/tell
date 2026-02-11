@@ -106,6 +106,10 @@ interface SettingsGitHubAPI {
     data?: GithubAccount
     error?: string
   }>
+  deleteAccount: (accountId: string) => Promise<{
+    success: boolean
+    error?: string
+  }>
 }
 
 interface AppAPI {

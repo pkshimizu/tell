@@ -44,7 +44,9 @@ const api = {
       getAllRegisteredRepositories: () =>
         ipcRenderer.invoke('settings:github:getAllRegisteredRepositories'),
       updateAccountToken: (accountId: string, personalAccessToken: string) =>
-        ipcRenderer.invoke('settings:github:updateAccountToken', accountId, personalAccessToken)
+        ipcRenderer.invoke('settings:github:updateAccountToken', accountId, personalAccessToken),
+      deleteAccount: (accountId: string) =>
+        ipcRenderer.invoke('settings:github:deleteAccount', accountId)
     },
     pullRequests: {
       get: () => ipcRenderer.invoke('settings:pullRequests:get'),
