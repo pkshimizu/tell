@@ -13,44 +13,48 @@ tell is a desktop application that helps you stay on top of your GitHub activiti
 ### 📋 Main Features
 
 - **📊 Pull Request Dashboard**: View all open pull requests at a glance
-- **🔄 Real-time Updates**: Automatically refreshes every 5 minutes
+- **🔄 Real-time Updates**: Automatically refreshes with configurable intervals (1-15 minutes)
 - **👤 Smart Filtering**: See only PRs where you're involved (author, assignee, or reviewer)
 - **🏢 Multi-Repository Support**: Monitor multiple repositories from different organizations
-- **💾 Offline Support**: Works offline with cached data
+- **🔀 Sorting Options**: Sort PRs by creation date, update date, or author
+- **✅ Check Status Display**: View CI/CD check results directly in the PR list
+- **🌿 Branch Information**: See source and target branch names for each PR
+- **⏰ Time-based Coloring**: Visual indicators for PR update times
+- **🌙 Dark/Light Mode**: Switch between themes or follow system preference
+- **💾 Window State Persistence**: Remember window position and size across sessions
+- **🎯 Onboarding Guide**: Helpful guidance for new users to get started
 
 ## 📸 Screenshots
 
-<img width="1012" height="892" alt="tell Application Screenshot" src="docs/images/tell-app-screenshot.png" />
+### Light Mode
+
+<img width="1012" alt="tell Application Screenshot - Light Mode" src="docs/images/capture_light.png" />
+
+### Dark Mode
+
+<img width="1012" alt="tell Application Screenshot - Dark Mode" src="docs/images/capture_dark.png" />
 
 ## 📥 Installation
 
 ### Download
 
 1. Visit the [Releases page](https://github.com/pkshimizu/tell/releases)
-2. Download the appropriate installer for your operating system:
-   - **Windows**: `tell-{version}-setup.exe`
-   - **macOS**: `tell-{version}.dmg`
-   - **Linux**: Choose from AppImage, snap, or deb format
+2. Download the appropriate file for your operating system:
+   - **Windows**: `tell-{version}-win.exe`
+   - **macOS**: `tell-{version}-mac-universal.zip`
 
 ### Platform-specific Installation
 
 #### Windows
 
 1. Double-click the downloaded `.exe` file
-2. Follow the installation wizard
-3. The application will be added to your Start menu
+2. The application runs directly without installation (portable)
 
 #### macOS
 
-1. Open the downloaded `.dmg` file
-2. Drag the tell app to your Applications folder
+1. Extract the downloaded `.zip` file
+2. Move the tell app to your Applications folder
 3. On first launch, you may need to allow the app in System Preferences → Security & Privacy
-
-#### Linux
-
-- **AppImage**: Make it executable with `chmod +x` and run directly
-- **Snap**: `sudo snap install tell-{version}.snap --dangerous`
-- **Deb**: `sudo dpkg -i tell-{version}.deb`
 
 ## 🚀 Getting Started
 
@@ -98,10 +102,22 @@ To use tell, you need to create a GitHub Personal Access Token:
   - Assignees
   - Reviewers with their review status
 
-#### Filtering Options
+#### Filtering and Sorting Options
 
 - **"Only my PRs"**: Toggle this to see only PRs where you're involved
+- **Sort by**: Choose to sort by creation date, update date, or author
+- **Sort order**: Switch between ascending and descending order
 - **Refresh**: Manually refresh the PR list at any time
+- **Auto-reload indicator**: Progress bar shows time until next automatic refresh
+
+#### Theme Settings
+
+- Navigate to Settings to switch between Light mode, Dark mode, or System preference
+
+#### Token Management
+
+- **Update Token**: Update your Personal Access Token when it expires
+- **Delete Account**: Remove a GitHub account from tell when needed
 
 ## 🔧 Troubleshooting
 
@@ -109,9 +125,10 @@ To use tell, you need to create a GitHub Personal Access Token:
 
 #### "Authentication Failed" Error
 
-- Verify your Personal Access Token hasn't expired
+- If your token has expired, tell will prompt you to update it
+- Click "Update Token" in the dialog or go to Settings → GitHub
 - Ensure the token has the required permissions
-- Try regenerating a new token on GitHub
+- You can also delete and re-add the account if needed
 
 #### Pull Requests Not Showing
 
@@ -123,7 +140,6 @@ To use tell, you need to create a GitHub Personal Access Token:
 
 - **Windows**: Check Windows Defender or antivirus settings
 - **macOS**: Allow the app in System Preferences → Security & Privacy
-- **Linux**: Ensure execution permissions are set
 
 ### Getting Help
 

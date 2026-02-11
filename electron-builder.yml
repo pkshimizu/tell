@@ -14,17 +14,16 @@ asarUnpack:
 win:
   icon: build/icon.ico
   executableName: tell
-nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
+  target:
+    - target: portable
+      arch:
+        - x64
+portable:
+  artifactName: ${name}-${version}-win.${ext}
 mac:
   icon: build/icon.png
   target:
-    - target: dmg
+    - target: zip
       arch:
         - universal
   entitlementsInherit: build/entitlements.mac.plist
@@ -35,19 +34,6 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
   identity: null
-dmg:
-  icon: build/icon.icns
-  artifactName: ${name}-${version}.${ext}
-linux:
-  icon: build/icon.png
-  target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
