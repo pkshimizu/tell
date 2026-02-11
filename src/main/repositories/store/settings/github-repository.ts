@@ -72,6 +72,18 @@ export class StoreSettingsGithubRepository {
   }
 
   /**
+   * GitHubアカウントのPersonal Access Tokenを更新する
+   * 既存のOwner/Repository情報は維持される
+   */
+  updateAccountToken(
+    id: string,
+    personalAccessToken: string,
+    expiredAt: string | null
+  ): StoreSettingsGitHubAccount | undefined {
+    return this.updateAccount(id, { personalAccessToken, expiredAt })
+  }
+
+  /**
    * GitHubアカウントを削除する
    */
   deleteAccount(id: string): void {

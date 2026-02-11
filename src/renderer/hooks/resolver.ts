@@ -10,6 +10,12 @@ export default function useResolver() {
       yup.object({
         token: validation.githubPersonalAccessToken
       })
+    ),
+    githubPersonalAccessTokenUpdate: yupResolver(
+      yup.object({
+        accountId: yup.string().required(),
+        token: validation.githubPersonalAccessToken
+      })
     )
   }
 }

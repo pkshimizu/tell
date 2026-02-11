@@ -13,6 +13,7 @@ type PullRequestsStore = {
   fetchPullRequests: (state: 'open' | 'closed', forceRefresh?: boolean) => Promise<void>
   refreshPullRequests: (state: 'open' | 'closed') => Promise<void>
   clearPullRequests: () => void
+  clearError: () => void
 }
 
 const usePullRequests = create<PullRequestsStore>((set, get) => ({
@@ -77,6 +78,10 @@ const usePullRequests = create<PullRequestsStore>((set, get) => ({
       lastFetchedAt: null,
       error: null
     })
+  },
+
+  clearError: () => {
+    set({ error: null })
   }
 }))
 

@@ -3,6 +3,7 @@ import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
+import GitHubTokenExpiredDialog from '@renderer/features/github/token-expired-dialog'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   GitHubAccount,
@@ -100,7 +101,8 @@ export default function GitHubPullRequestsPanel(props: Props) {
     error,
     lastFetchedAt,
     fetchPullRequests,
-    refreshPullRequests
+    refreshPullRequests,
+    clearError
   } = usePullRequests()
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
   const [isInitialLoad, setIsInitialLoad] = useState(true)
@@ -108,6 +110,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
   const elapsedSecondsRef = useRef(0)
   const [reloadInterval, setReloadInterval] = useState<ReloadInterval>(5)
   const reloadIntervalSeconds = reloadInterval * 60
+  const [tokenExpiredDialogOpen, setTokenExpiredDialogOpen] = useState(false)
 
   const { control, watch, setValue } = useForm<FilterFormData>({
     defaultValues: {
@@ -180,9 +183,32 @@ export default function GitHubPullRequestsPanel(props: Props) {
   // エラーメッセージの表示
   useEffect(() => {
     if (error) {
-      message.setMessage('error', error)
+      // 認証エラーの場合はトークン更新ダイアログを表示
+      if (error.includes('[AUTH_FAILED]')) {
+        setTokenExpiredDialogOpen(true)
+      } else {
+        message.setMessage('error', error)
+      }
     }
   }, [error, message])
+
+  const handleTokenExpiredDialogClose = () => {
+    clearError()
+    setTokenExpiredDialogOpen(false)
+  }
+
+  const handleTokenUpdated = async () => {
+    // エラーをクリアしてダイアログを閉じる
+    clearError()
+    setTokenExpiredDialogOpen(false)
+    // トークン更新後、アカウント情報を再読み込みしてプルリクエストを再取得
+    const result = await window.api.settings.github.getAccounts()
+    if (result.success && result.data) {
+      setAccounts(result.data)
+    }
+    await refreshPullRequests(props.state)
+    resetTimer()
+  }
 
   useEffect(() => {
     // 初回読み込み（データがない場合のみ）
@@ -278,6 +304,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
           )}
         </>
       )}
+      <GitHubTokenExpiredDialog
+        open={tokenExpiredDialogOpen}
+        accounts={accounts}
+        onClose={handleTokenExpiredDialogClose}
+        onTokenUpdated={handleTokenUpdated}
+      />
     </TColumn>
   )
 }
