@@ -146,6 +146,51 @@ export class SettingsService {
       repositoryHtmlUrl: repository.htmlUrl
     }))
   }
+
+  /**
+   * GitHubアカウントのPersonal Access Tokenを更新する
+   * 既存のOwner/Repository情報は維持される
+   * @param accountId - GitHubアカウントID (UUID)
+   * @param personalAccessToken - 新しいGitHub Personal Access Token
+   * @returns 更新されたGitHubアカウント情報
+   * @throws Error - アカウントが見つからない場合、またはAPI呼び出しが失敗した場合
+   */
+  async updateGitHubAccountToken(
+    accountId: string,
+    personalAccessToken: string
+  ): Promise<StoreSettingsGitHubAccount> {
+    // storeからアカウント情報を取得
+    const existingAccount = githubStoreRepository.findAccountById(accountId)
+    if (!existingAccount) {
+      throw new Error(`GitHub account with id '${accountId}' not found`)
+    }
+
+    // 新しいトークンでGitHub APIからアカウント情報を取得して検証
+    const accountInfo = await githubApiRepository.getAccount(personalAccessToken)
+
+    // 同じアカウントのトークンであることを確認
+    if (accountInfo.login !== existingAccount.login) {
+      throw new Error(
+        `Token belongs to a different account '${accountInfo.login}'. Expected '${existingAccount.login}'.`
+      )
+    }
+
+    // トークンの有効期限を取得
+    const expiredAt = await githubApiRepository.getTokenExpiration(personalAccessToken)
+
+    // トークンを更新
+    const updatedAccount = githubStoreRepository.updateAccountToken(
+      accountId,
+      personalAccessToken,
+      expiredAt ? expiredAt.toISOString() : null
+    )
+
+    if (!updatedAccount) {
+      throw new Error('Failed to update account token')
+    }
+
+    return updatedAccount
+  }
 }
 
 export const settingsService = new SettingsService()

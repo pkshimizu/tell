@@ -48,7 +48,9 @@ export class GitHubApiRepository {
 
     // Authentication error
     if (response.status === 401) {
-      throw new Error('Authentication failed. Please check your GitHub token in settings.')
+      throw new Error(
+        '[AUTH_FAILED] Authentication failed. Please check your GitHub token in settings.'
+      )
     }
 
     // Rate limit error

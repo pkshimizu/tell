@@ -78,6 +78,13 @@ function RouteComponent() {
     setAccounts((prev) => [...prev, account])
   }
 
+  const handleAccountUpdated = (updatedAccount: GitHubAccount) => {
+    // アカウント情報を更新
+    setAccounts((prev) =>
+      prev.map((account) => (account.id === updatedAccount.id ? updatedAccount : account))
+    )
+  }
+
   return (
     <TColumn gap={2} fullWidth>
       <TText variant="title">GitHub Settings</TText>
@@ -86,7 +93,7 @@ function RouteComponent() {
         <TSelect name="reloadInterval" control={control} items={reloadIntervalItems} />
       </TRow>
       <GitHubAccountCreateForm onAccountAdded={handleAccountAdded} />
-      <GitHubAccountTable accounts={accounts} />
+      <GitHubAccountTable accounts={accounts} onAccountUpdated={handleAccountUpdated} />
     </TColumn>
   )
 }

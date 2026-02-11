@@ -352,6 +352,23 @@ app.whenReady().then(async () => {
       }
     }
   })
+  ipcMain.handle(
+    'settings:github:updateAccountToken',
+    async (_, accountId: string, personalAccessToken: string) => {
+      try {
+        const account = await settingsService.updateGitHubAccountToken(
+          accountId,
+          personalAccessToken
+        )
+        return { success: true, data: account }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred'
+        }
+      }
+    }
+  )
   ipcMain.handle('github:getPullRequests', async (_, state: 'open' | 'closed') => {
     try {
       const pullRequests = await githubService.getPullRequests(state)

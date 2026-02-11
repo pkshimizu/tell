@@ -9,11 +9,13 @@ import useText from '@renderer/hooks/text'
 import TButton from '@renderer/components/form/button'
 import TIconButton from '@renderer/components/form/icon-button'
 import GitHubRepositorySelectDialog from './repository-select-dialog'
+import GitHubAccountUpdateTokenDialog from './account-update-token-dialog'
 import GitHubIcon from '@renderer/components/display/icons/github'
 import CloseIcon from '@renderer/components/display/icons/close'
 
 interface Props {
   accounts: GitHubAccount[]
+  onAccountUpdated?: (account: GitHubAccount) => void
 }
 
 interface RegisteredRepository {
@@ -23,9 +25,13 @@ interface RegisteredRepository {
   repositoryHtmlUrl: string
 }
 
-export default function GitHubAccountTable({ accounts }: Props) {
+export default function GitHubAccountTable({ accounts, onAccountUpdated }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [updateTokenDialogOpen, setUpdateTokenDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null)
+  const [selectedAccountForUpdate, setSelectedAccountForUpdate] = useState<GitHubAccount | null>(
+    null
+  )
   const [repositories, setRepositories] = useState<RegisteredRepository[]>([])
   const text = useText()
 
@@ -49,6 +55,22 @@ export default function GitHubAccountTable({ accounts }: Props) {
     setDialogOpen(false)
     setSelectedAccountId(null)
     loadRepositories()
+  }
+
+  const handleOpenUpdateTokenDialog = (account: GitHubAccount) => {
+    setSelectedAccountForUpdate(account)
+    setUpdateTokenDialogOpen(true)
+  }
+
+  const handleCloseUpdateTokenDialog = () => {
+    setUpdateTokenDialogOpen(false)
+    setSelectedAccountForUpdate(null)
+  }
+
+  const handleTokenUpdated = (updatedAccount: GitHubAccount) => {
+    if (onAccountUpdated) {
+      onAccountUpdated(updatedAccount)
+    }
   }
 
   const getAccountRepositories = (accountId: number) => {
@@ -75,7 +97,11 @@ export default function GitHubAccountTable({ accounts }: Props) {
       <TColumn gap={2}>
         {accounts.map((account) => (
           <TColumn key={account.id} gap={1}>
-            <TGrid columns={['56px', '1fr', '160px', '120px']} gap={2} alignItems={'center'}>
+            <TGrid
+              columns={['56px', '1fr', '160px', '120px', '120px']}
+              gap={2}
+              alignItems={'center'}
+            >
               {account.avatarUrl ? (
                 <TAvatar url={account.avatarUrl} alt={account.login} size={56} />
               ) : (
@@ -91,6 +117,7 @@ export default function GitHubAccountTable({ accounts }: Props) {
                 <TText>Expires date</TText>
                 <TText>{text.formatDateTime(account.expiredAt) ?? 'No expires'}</TText>
               </TColumn>
+              <TButton onClick={() => handleOpenUpdateTokenDialog(account)}>Update Token</TButton>
               <TButton onClick={() => handleOpenDialog(account.id)}>Repositories</TButton>
             </TGrid>
             {getAccountRepositories(account.id).length > 0 && (
@@ -127,6 +154,12 @@ export default function GitHubAccountTable({ accounts }: Props) {
         open={dialogOpen}
         accountId={selectedAccountId}
         onClose={handleCloseDialog}
+      />
+      <GitHubAccountUpdateTokenDialog
+        open={updateTokenDialogOpen}
+        account={selectedAccountForUpdate}
+        onClose={handleCloseUpdateTokenDialog}
+        onTokenUpdated={handleTokenUpdated}
       />
     </>
   )

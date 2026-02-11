@@ -98,6 +98,14 @@ interface SettingsGitHubAPI {
     }>
     error?: string
   }>
+  updateAccountToken: (
+    accountId: string,
+    personalAccessToken: string
+  ) => Promise<{
+    success: boolean
+    data?: GithubAccount
+    error?: string
+  }>
 }
 
 interface AppAPI {
