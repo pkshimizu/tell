@@ -100,20 +100,31 @@ export class GitHubService {
         .getPullRequests(token, repositories, state)
         .then((prs) => ({
           status: 'fulfilled' as const,
-          pullRequests: prs
+          pullRequests: prs,
+          error: null as string | null
         }))
-        .catch(() => ({
+        .catch((error: Error) => ({
           status: 'rejected' as const,
-          pullRequests: [] as GitHubApiPullRequest[]
+          pullRequests: [] as GitHubApiPullRequest[],
+          error: error.message
         }))
     )
 
     const results = await Promise.all(promises)
     const pullRequests: GitHubApiPullRequest[] = []
+    const authErrors: string[] = []
 
-    // 結果を処理（エラーが発生したリポジトリは空配列として扱う）
+    // 結果を処理（認証エラーは収集し、それ以外のエラーは空配列として扱う）
     for (const result of results) {
+      if (result.status === 'rejected' && result.error?.includes('[AUTH_FAILED]')) {
+        authErrors.push(result.error)
+      }
       pullRequests.push(...result.pullRequests)
+    }
+
+    // 認証エラーがあればスローして上位に伝播
+    if (authErrors.length > 0) {
+      throw new Error(authErrors[0])
     }
 
     return pullRequests
