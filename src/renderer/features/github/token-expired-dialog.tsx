@@ -48,12 +48,12 @@ export default function GitHubTokenExpiredDialog({
     }
   })
 
-  // accountsが読み込まれたらaccountIdを設定
+  // ダイアログが開いたとき、またはaccountsが読み込まれたらaccountIdを設定
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (open && accounts.length > 0) {
       setValue('accountId', String(accounts[0].id))
     }
-  }, [accounts, setValue])
+  }, [open, accounts, setValue])
 
   const accountItems = accounts.map((account) => ({
     value: String(account.id),
