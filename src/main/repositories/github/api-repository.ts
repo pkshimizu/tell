@@ -431,7 +431,24 @@ export class GitHubApiRepository {
 
     const data = await response.json()
 
+    // GraphQL APIは200でも認証エラーを返すことがある
+    if (data.message === 'Bad credentials') {
+      throw new Error(
+        '[AUTH_FAILED] Authentication failed. Please check your GitHub token in settings.'
+      )
+    }
+
     if (data.errors) {
+      // 認証エラーをチェック
+      const authError = data.errors.find(
+        (e: { type?: string; message?: string }) =>
+          e.type === 'UNAUTHORIZED' || e.message?.toLowerCase().includes('unauthorized')
+      )
+      if (authError) {
+        throw new Error(
+          '[AUTH_FAILED] Authentication failed. Please check your GitHub token in settings.'
+        )
+      }
       throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`)
     }
 
