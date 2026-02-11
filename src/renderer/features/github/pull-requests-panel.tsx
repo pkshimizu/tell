@@ -2,9 +2,11 @@ import TAlert from '@renderer/components/feedback/alert'
 import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
+import TButton from '@renderer/components/form/button'
 import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
 import GitHubTokenExpiredDialog from '@renderer/features/github/token-expired-dialog'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   GitHubAccount,
   GitHubApiPullRequest,
@@ -92,6 +94,7 @@ function groupingPullRequests(pullRequests: GitHubApiPullRequest[]): OwnerReposi
 }
 
 export default function GitHubPullRequestsPanel(props: Props) {
+  const navigate = useNavigate()
   const text = useText()
   const message = useMessage()
   const {
@@ -105,6 +108,9 @@ export default function GitHubPullRequestsPanel(props: Props) {
     clearError
   } = usePullRequests()
   const [accounts, setAccounts] = useState<GitHubAccount[]>([])
+  const [registeredRepositoriesCount, setRegisteredRepositoriesCount] = useState<number | null>(
+    null
+  )
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const elapsedSecondsRef = useRef(0)
@@ -149,12 +155,18 @@ export default function GitHubPullRequestsPanel(props: Props) {
     }
   }, [refreshPullRequests, props.state, error, message, resetTimer])
 
-  // GitHubアカウント取得
+  // GitHubアカウントと登録済みリポジトリ取得
   useEffect(() => {
     ;(async () => {
-      const result = await window.api.settings.github.getAccounts()
-      if (result.success && result.data) {
-        setAccounts(result.data)
+      const accountsResult = await window.api.settings.github.getAccounts()
+      if (accountsResult.success && accountsResult.data) {
+        setAccounts(accountsResult.data)
+      }
+      const repositoriesResult = await window.api.settings.github.getAllRegisteredRepositories()
+      if (repositoriesResult.success && repositoriesResult.data) {
+        setRegisteredRepositoriesCount(repositoriesResult.data.length)
+      } else {
+        setRegisteredRepositoriesCount(0)
       }
     })()
   }, [])
@@ -248,6 +260,38 @@ export default function GitHubPullRequestsPanel(props: Props) {
 
   // ソート処理
   const sortedPullRequests = sortPullRequests(filteredPullRequests, sortBy, sortOrder)
+
+  // リポジトリ未登録時のガイダンス表示
+  if (registeredRepositoriesCount === 0) {
+    return (
+      <TColumn gap={2}>
+        <TRow align="center" gap={1}>
+          <GitHubIcon />
+          <TText>Open Pull Requests</TText>
+        </TRow>
+        <TAlert severity="info" title="No repositories registered">
+          <TColumn gap={2}>
+            <TText>To view pull requests, you need to register GitHub repositories first.</TText>
+            <TColumn gap={1}>
+              <TText variant="subtitle">How to register repositories:</TText>
+              <TText>1. Go to Settings &gt; GitHub</TText>
+              <TText>2. Add your GitHub account with a Personal Access Token</TText>
+              <TText>
+                3. Click &quot;Repositories&quot; button and select repositories to monitor
+              </TText>
+            </TColumn>
+            <TButton
+              variant="contained"
+              color="primary"
+              onClick={() => navigate({ to: '/settings/github' })}
+            >
+              Go to GitHub Settings
+            </TButton>
+          </TColumn>
+        </TAlert>
+      </TColumn>
+    )
+  }
 
   return (
     <TColumn gap={1}>
