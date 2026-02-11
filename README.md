@@ -36,25 +36,39 @@ tell is a desktop application that helps you stay on top of your GitHub activiti
 
 ## 📥 Installation
 
-### Download
+### Prerequisites
 
-1. Visit the [Releases page](https://github.com/pkshimizu/tell/releases)
-2. Download the appropriate file for your operating system:
-   - **Windows**: `tell-{version}-win.exe`
-   - **macOS**: `tell-{version}-mac-universal.zip`
+- [Node.js](https://nodejs.org/) 20 or later
+- [Git](https://git-scm.com/)
 
-### Platform-specific Installation
+### Build from Source
 
-#### Windows
+1. **Clone the repository**
 
-1. Double-click the downloaded `.exe` file
-2. The application runs directly without installation (portable)
+   ```bash
+   git clone https://github.com/pkshimizu/tell.git
+   cd tell
+   ```
 
-#### macOS
+2. **Install dependencies**
 
-1. Extract the downloaded `.zip` file
-2. Move the tell app to your Applications folder
-3. On first launch, you may need to allow the app in System Preferences → Security & Privacy
+   ```bash
+   npm install
+   ```
+
+3. **Build for your platform**
+
+   ```bash
+   # For Windows
+   npm run build:win
+
+   # For macOS
+   npm run build:mac
+   ```
+
+4. **Run the application**
+   - **Windows**: Run `dist/tell-{version}-win.exe`
+   - **macOS**: Open `dist/mac-universal/tell.app`
 
 ## 🚀 Getting Started
 
