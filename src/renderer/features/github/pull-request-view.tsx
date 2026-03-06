@@ -95,7 +95,7 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
               targetBranch={pullRequest.targetBranch}
             />
             {pullRequest.statusChecks && pullRequest.statusChecks.checks.length > 0 && (
-              <TRow gap={1} align={'center'}>
+              <TRow rowGap={0.5} columnGap={1} align={'center'} wrap={'wrap'}>
                 {pullRequest.statusChecks.checks.map((check, index) => (
                   <TRow key={`${check.name}-${index}`} align={'center'} gap={0.5}>
                     <CheckRunStatusIcon check={check} />
