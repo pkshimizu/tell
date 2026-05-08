@@ -72,6 +72,7 @@ export interface GitHubApiStatusChecks {
 
 export interface GitHubApiPullRequest {
   id: string
+  number: number
   owner: GitHubApiOwner
   repository: GitHubApiRepository
   author: GitHubApiPullRequestAuthor

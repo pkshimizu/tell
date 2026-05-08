@@ -591,6 +591,7 @@ export class GitHubApiRepository {
 
         const pullRequest: GitHubApiPullRequest = {
           id: pr.id,
+          number: pr.number,
           owner: {
             login: repo.owner.login,
             htmlUrl: repo.owner.url,

@@ -88,7 +88,7 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
         <TGridItem align={'center'}>
           <TColumn>
             <TLink href={pullRequest.htmlUrl}>
-              <TText>{pullRequest.title}</TText>
+              <TText>{`#${pullRequest.number} ${pullRequest.title}`}</TText>
             </TLink>
             <TBranchArrow
               sourceBranch={pullRequest.sourceBranch}
