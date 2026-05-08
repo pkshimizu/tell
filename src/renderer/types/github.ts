@@ -73,6 +73,7 @@ export interface GitHubApiPullRequestReviewer {
 
 export interface GitHubApiPullRequest {
   id: string
+  number: number
   owner: GitHubOwner
   repository: GitHubRepository
   author: GitHubApiPullRequestAuthor
