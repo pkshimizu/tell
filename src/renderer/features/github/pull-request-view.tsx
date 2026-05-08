@@ -21,6 +21,8 @@ import CloseIcon from '@renderer/components/display/icons/close'
 import LoadingIcon from '@renderer/components/display/icons/loading'
 import TLink from '@renderer/components/navigation/link'
 import TBranchArrow from '@renderer/components/display/branch-arrow'
+import TIconButton from '@renderer/components/form/icon-button'
+import CopyIcon from '@renderer/components/display/icons/copy'
 import type { ThemeColor } from '@renderer/types/color'
 
 type Props = {
@@ -87,9 +89,18 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
       <TGrid columns={['1fr', '160px', '240px']} gap={1}>
         <TGridItem align={'center'}>
           <TColumn>
-            <TLink href={pullRequest.htmlUrl}>
-              <TText>{`#${pullRequest.number} ${pullRequest.title}`}</TText>
-            </TLink>
+            <TRow align={'center'} gap={0.5}>
+              <TLink href={pullRequest.htmlUrl}>
+                <TText>{`#${pullRequest.number} ${pullRequest.title}`}</TText>
+              </TLink>
+              <TIconButton
+                onClick={() => {
+                  navigator.clipboard.writeText(pullRequest.htmlUrl)
+                }}
+              >
+                <CopyIcon size={16} />
+              </TIconButton>
+            </TRow>
             <TBranchArrow
               sourceBranch={pullRequest.sourceBranch}
               targetBranch={pullRequest.targetBranch}
