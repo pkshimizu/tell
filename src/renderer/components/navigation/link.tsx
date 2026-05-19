@@ -16,7 +16,8 @@ export default function TLink({ href, children }: Props) {
         color: 'black.main',
         textDecorationColor: 'inherit',
         textDecoration: 'none',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        overflowWrap: 'anywhere'
       }}
     >
       {children}
