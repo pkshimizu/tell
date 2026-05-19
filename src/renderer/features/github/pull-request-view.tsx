@@ -86,7 +86,7 @@ export default function GitHubPullRequestView({ pullRequest }: Props) {
   const text = useText()
   return (
     <TBox backgroundColor={'boxBackground'} padding={2}>
-      <TGrid columns={['1fr', '160px', '240px']} gap={1}>
+      <TGrid columns={['minmax(0, 1fr)', '160px', '240px']} gap={1}>
         <TGridItem align={'center'}>
           <TColumn>
             <TRow align={'center'} gap={0.5}>
