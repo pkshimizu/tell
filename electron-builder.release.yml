@@ -1,6 +1,7 @@
 extends: electron-builder.yml
 mac:
   forceCodeSigning: true
+  identity: ''
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
