@@ -22,18 +22,20 @@ portable:
   artifactName: ${name}-${version}-win.${ext}
 mac:
   icon: build/icon.png
+  forceCodeSigning: true
   target:
     - target: zip
       arch:
         - universal
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
-  identity: null
+  notarize: true
 npmRebuild: false
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

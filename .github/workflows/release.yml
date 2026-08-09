@@ -111,8 +111,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build macOS app
+      - name: Build, sign, and notarize macOS app
         run: npm run build:mac
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Verify macOS signature and notarization
+        run: |
+          APP_PATH="dist/mac-universal/tell.app"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --verbose --type exec "$APP_PATH"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
