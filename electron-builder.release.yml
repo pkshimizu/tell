@@ -1,8 +1,26 @@
-extends: electron-builder.yml
+extends: electron-builder.base.yml
 mac:
+  target:
+    - target: dmg
+      arch:
+        - universal
   forceCodeSigning: true
   identity: ''
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   notarize: true
+dmg:
+  artifactName: ${name}-${version}-universal-mac.${ext}
+  title: ${productName} ${version}
+  sign: false
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 190
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications

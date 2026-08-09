@@ -70,6 +70,13 @@ tell is a desktop application that helps you stay on top of your GitHub activiti
    - **Windows**: Run `dist/tell-{version}-win.exe`
    - **macOS**: Open `dist/mac-universal/tell.app`
 
+### Install a macOS release
+
+1. Download `tell-{version}-universal-mac.dmg` from the GitHub Release.
+2. Open the DMG.
+3. Drag `tell.app` to the `Applications` folder shown in the DMG window.
+4. Launch tell from the Applications folder.
+
 ## 🚀 Getting Started
 
 ### Initial Setup

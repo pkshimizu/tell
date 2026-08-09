@@ -175,9 +175,8 @@ $ npm run db:studio
 
 4. **Automated Build**
    - GitHub Actions will automatically start and generate binaries:
-     - Windows: `tell-{version}-setup.exe` (x64)
-     - macOS: `tell-{version}.dmg` (Universal: Intel & Apple Silicon)
-     - Linux: AppImage, snap, deb formats
+     - Windows: `tell-{version}-win.exe` (x64)
+     - macOS: `tell-{version}-universal-mac.dmg` (Universal: Intel & Apple Silicon)
    - Generated binaries will be automatically uploaded to the release page
 
 ### Version Management

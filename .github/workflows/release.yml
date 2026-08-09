@@ -137,9 +137,32 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Verify macOS signature and notarization
+      - name: Verify macOS DMG contents
         run: |
-          APP_PATH="dist/mac-universal/tell.app"
+          DMG_PATH="dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg"
+          MOUNT_POINT="$(mktemp -d)"
+
+          cleanup() {
+            hdiutil detach "$MOUNT_POINT" || true
+            rmdir "$MOUNT_POINT" || true
+          }
+          trap cleanup EXIT
+
+          test -f "$DMG_PATH"
+          hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$MOUNT_POINT"
+
+          APP_PATH="$MOUNT_POINT/tell.app"
+          test -d "$APP_PATH"
+          test -L "$MOUNT_POINT/Applications"
+
+          ARCHS="$(lipo -archs "$APP_PATH/Contents/MacOS/tell")"
+          for arch in x86_64 arm64; do
+            if [[ " $ARCHS " != *" $arch "* ]]; then
+              echo "::error::Missing $arch architecture: $ARCHS"
+              exit 1
+            fi
+          done
+
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           xcrun stapler validate "$APP_PATH"
           spctl --assess --verbose --type exec "$APP_PATH"
@@ -149,15 +172,13 @@ jobs:
         with:
           name: macos-build
           path: |
-            dist/*.zip
+            dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg
           retention-days: 7
 
       - name: Upload to release
-        run: |
-          for file in dist/*.zip; do
-            if [ -f "$file" ]; then
-              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
-            fi
-          done
+        run: >-
+          gh release upload ${{ github.event.release.tag_name }}
+          "dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg"
+          --clobber
         env:
           GH_TOKEN: ${{ github.token }}
