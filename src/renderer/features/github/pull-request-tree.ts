@@ -1,4 +1,4 @@
-import type { GitHubApiPullRequest } from '@renderer/types/github'
+import type { GitHubApiPullRequest } from '../../types/github'
 
 export type PullRequestTreeNode = {
   pullRequest: GitHubApiPullRequest

@@ -4,7 +4,7 @@ import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import TButton from '@renderer/components/form/button'
 import GitHubTokenExpiredDialog from '@renderer/features/github/token-expired-dialog'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   GitHubAccount,
@@ -248,19 +248,26 @@ export default function GitHubPullRequestsPanel(props: Props) {
     }
   }, [props.state, fetchPullRequests, refreshPullRequests, isInitialLoad, reloadIntervalSeconds])
 
-  // 自分が作成者、assignee、またはreviewerに含まれているPRのみをフィルタリング
-  const filteredPullRequests = filterMyPRs
-    ? pullRequests.filter((pr) => {
-        const myLogins = accounts.map((account) => account.login)
-        const isAuthor = myLogins.includes(pr.author.name)
-        const isAssignee = pr.assignees.some((assignee) => myLogins.includes(assignee.name))
-        const isReviewer = pr.reviewers.some((reviewer) => myLogins.includes(reviewer.name))
-        return isAuthor || isAssignee || isReviewer
-      })
-    : pullRequests
+  const groupedPullRequests = useMemo(() => {
+    const myLogins = new Set(accounts.map((account) => account.login))
+    const filteredPullRequests = filterMyPRs
+      ? pullRequests.filter((pr) => {
+          const isAuthor = myLogins.has(pr.author.name)
+          const isAssignee = pr.assignees.some((assignee) => myLogins.has(assignee.name))
+          const isReviewer = pr.reviewers.some((reviewer) => myLogins.has(reviewer.name))
+          return isAuthor || isAssignee || isReviewer
+        })
+      : pullRequests
+    const sortedPullRequests = sortPullRequests(filteredPullRequests, sortBy, sortOrder)
 
-  // ソート処理
-  const sortedPullRequests = sortPullRequests(filteredPullRequests, sortBy, sortOrder)
+    return groupingPullRequests(sortedPullRequests).map((owner) => ({
+      ...owner,
+      repositories: Array.from(owner.repositories.values()).map((repository) => ({
+        ...repository,
+        pullRequestTree: buildPullRequestTree(repository.pullRequests)
+      }))
+    }))
+  }, [accounts, filterMyPRs, pullRequests, sortBy, sortOrder])
 
   // リポジトリ未登録時のガイダンス表示
   if (registeredRepositoriesCount === 0) {
@@ -328,12 +335,12 @@ export default function GitHubPullRequestsPanel(props: Props) {
           <TCircularProgress size={40} />
           <TText>Loading pull requests...</TText>
         </TColumn>
-      ) : sortedPullRequests.length === 0 ? (
+      ) : groupedPullRequests.length === 0 ? (
         <TAlert severity={'info'}>No pull requests</TAlert>
       ) : (
         <>
-          {groupingPullRequests(sortedPullRequests).map((owner) =>
-            Array.from(owner.repositories.values()).map((repository) => (
+          {groupedPullRequests.map((owner) =>
+            owner.repositories.map((repository) => (
               <TColumn key={repository.repository.htmlUrl} gap={1}>
                 <TRow gap={1}>
                   <TAvatar alt={owner.owner.login} url={owner.owner.avatarUrl!} size={24} />
@@ -341,7 +348,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
                   <TText>/</TText>
                   <TText>{repository.repository.name}</TText>
                 </TRow>
-                <PullRequestTreeView nodes={buildPullRequestTree(repository.pullRequests)} />
+                <PullRequestTreeView nodes={repository.pullRequestTree} />
               </TColumn>
             ))
           )}
