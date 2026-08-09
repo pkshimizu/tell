@@ -26,8 +26,9 @@ jobs:
 
       - name: Get release tag version
         id: tag-version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          RELEASE_TAG="${{ github.event.release.tag_name }}"
           echo "Release tag: $RELEASE_TAG"
 
           # Remove 'release/' prefix if present
@@ -39,10 +40,10 @@ jobs:
           echo "Tag version: $TAG_VERSION"
 
       - name: Verify version consistency
+        env:
+          PACKAGE_VERSION: ${{ steps.get-version.outputs.version }}
+          TAG_VERSION: ${{ steps.tag-version.outputs.tag_version }}
         run: |
-          PACKAGE_VERSION="${{ steps.get-version.outputs.version }}"
-          TAG_VERSION="${{ steps.tag-version.outputs.tag_version }}"
-
           echo "Verifying versions:"
           echo "  package.json: $PACKAGE_VERSION"
           echo "  Release tag:  $TAG_VERSION"
@@ -89,10 +90,11 @@ jobs:
         run: |
           $files = Get-ChildItem -Path dist -Filter *.exe
           foreach ($file in $files) {
-            gh release upload ${{ github.event.release.tag_name }} $file.FullName --clobber
+            gh release upload $env:RELEASE_TAG $file.FullName --clobber
           }
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
 
   build-macos:
     name: Build macOS
@@ -138,8 +140,10 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Verify macOS DMG contents
+        env:
+          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
         run: |
-          DMG_PATH="dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg"
+          DMG_PATH="dist/tell-${RELEASE_VERSION}-universal-mac.dmg"
           MOUNT_POINT="$(mktemp -d)"
 
           cleanup() {
@@ -154,6 +158,7 @@ jobs:
           APP_PATH="$MOUNT_POINT/tell.app"
           test -d "$APP_PATH"
           test -L "$MOUNT_POINT/Applications"
+          test "$(readlink "$MOUNT_POINT/Applications")" = "/Applications"
 
           ARCHS="$(lipo -archs "$APP_PATH/Contents/MacOS/tell")"
           for arch in x86_64 arm64; do
@@ -173,12 +178,15 @@ jobs:
           name: macos-build
           path: |
             dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg
+          compression-level: 0
           retention-days: 7
 
       - name: Upload to release
         run: >-
-          gh release upload ${{ github.event.release.tag_name }}
-          "dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg"
+          gh release upload "$RELEASE_TAG"
+          "dist/tell-${RELEASE_VERSION}-universal-mac.dmg"
           --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
