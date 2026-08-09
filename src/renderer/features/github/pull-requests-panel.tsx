@@ -3,7 +3,6 @@ import { TColumn, TRow } from '@renderer/components/layout/flex-box'
 import TAvatar from '@renderer/components/display/avatar'
 import TText from '@renderer/components/display/text'
 import TButton from '@renderer/components/form/button'
-import GitHubPullRequestView from '@renderer/features/github/pull-request-view'
 import GitHubTokenExpiredDialog from '@renderer/features/github/token-expired-dialog'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -24,6 +23,8 @@ import TCheckbox from '@renderer/components/form/checkbox'
 import TSelect from '@renderer/components/form/select'
 import { useForm } from 'react-hook-form'
 import useText from '@renderer/hooks/text'
+import { buildPullRequestTree } from '@renderer/features/github/pull-request-tree'
+import PullRequestTreeView from '@renderer/features/github/pull-request-tree-view'
 
 type ReloadInterval = 1 | 3 | 5 | 10 | 15
 
@@ -340,9 +341,7 @@ export default function GitHubPullRequestsPanel(props: Props) {
                   <TText>/</TText>
                   <TText>{repository.repository.name}</TText>
                 </TRow>
-                {repository.pullRequests.map((pullRequest) => (
-                  <GitHubPullRequestView key={pullRequest.htmlUrl} pullRequest={pullRequest} />
-                ))}
+                <PullRequestTreeView nodes={buildPullRequestTree(repository.pullRequests)} />
               </TColumn>
             ))
           )}
