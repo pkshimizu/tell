@@ -1,3 +1,6 @@
+# Windows / macOS 共通のパッケージ設定。
+# ローカルビルドは electron-builder.yml、リリースは electron-builder.release.yml が
+# このファイルを extends して差分だけを上書きする。
 appId: net.noncore.tell
 productName: tell
 directories:
@@ -9,6 +12,9 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # electron-builder の既定除外は electron-builder.{yml,yaml,...} だけなので、
+  # 分割した設定ファイルが app.asar に同梱されないよう明示的に除外する。
+  - '!electron-builder.*.{yml,yaml}'
 asarUnpack:
   - resources/**
 win:
@@ -20,6 +26,9 @@ win:
         - x64
 portable:
   artifactName: ${name}-${version}-win.${ext}
+# mac.target は各派生設定で定義する。
+# extends のマージは配列を「結合」するため、ここに置くと子側で上書きできず
+# zip と dmg の両方が生成されてしまう。
 mac:
   icon: build/icon.png
   entitlementsInherit: build/entitlements.mac.plist

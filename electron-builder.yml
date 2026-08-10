@@ -1,3 +1,5 @@
+# ローカルビルド用の既定設定（未署名・非公証の Universal ZIP）。
+# Apple の資格情報なしで `npm run build:mac` を実行できるようにするためのもの。
 extends: electron-builder.base.yml
 mac:
   target:
@@ -5,4 +7,5 @@ mac:
       arch:
         - universal
   notarize: false
+  # null は「署名しない」の意味（リリース設定の空文字とは意味が異なる）。
   identity: null

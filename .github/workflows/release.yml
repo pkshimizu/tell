@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check-version:
@@ -62,6 +62,8 @@ jobs:
     name: Build Windows
     needs: check-version
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,8 +91,13 @@ jobs:
       - name: Upload to release
         run: |
           $files = Get-ChildItem -Path dist -Filter *.exe
+          if ($files.Count -eq 0) {
+            Write-Error "No .exe artifact found in dist"
+            exit 1
+          }
           foreach ($file in $files) {
             gh release upload $env:RELEASE_TAG $file.FullName --clobber
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
         env:
           GH_TOKEN: ${{ github.token }}
@@ -100,6 +107,8 @@ jobs:
     name: Build macOS
     needs: check-version
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -139,21 +148,35 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Verify macOS DMG contents
+      # DMG のファイル名は electron-builder.release.yml の dmg.artifactName に対応する。
+      # 以降のステップはこの output だけを参照し、パスの二重定義を避ける。
+      - name: Resolve DMG path
+        id: dmg
         env:
           RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
+        run: echo "path=dist/tell-${RELEASE_VERSION}-universal-mac.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Verify macOS DMG contents
+        shell: bash
+        env:
+          DMG_PATH: ${{ steps.dmg.outputs.path }}
         run: |
-          DMG_PATH="dist/tell-${RELEASE_VERSION}-universal-mac.dmg"
+          set -euo pipefail
+
           MOUNT_POINT="$(mktemp -d)"
+          MOUNTED=0
 
           cleanup() {
-            hdiutil detach "$MOUNT_POINT" || true
+            if [ "$MOUNTED" = 1 ]; then
+              hdiutil detach "$MOUNT_POINT" || true
+            fi
             rmdir "$MOUNT_POINT" || true
           }
           trap cleanup EXIT
 
           test -f "$DMG_PATH"
           hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$MOUNT_POINT"
+          MOUNTED=1
 
           APP_PATH="$MOUNT_POINT/tell.app"
           test -d "$APP_PATH"
@@ -176,17 +199,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: |
-            dist/tell-${{ needs.check-version.outputs.version }}-universal-mac.dmg
+          path: ${{ steps.dmg.outputs.path }}
           compression-level: 0
           retention-days: 7
 
       - name: Upload to release
-        run: >-
-          gh release upload "$RELEASE_TAG"
-          "dist/tell-${RELEASE_VERSION}-universal-mac.dmg"
-          --clobber
+        run: gh release upload "$RELEASE_TAG" "$DMG_PATH" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
+          DMG_PATH: ${{ steps.dmg.outputs.path }}

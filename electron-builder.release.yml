@@ -1,3 +1,5 @@
+# リリース用の設定（Developer ID 署名 + Apple 公証済みの Universal DMG）。
+# CI から `electron-builder --config electron-builder.release.yml` で指定する。
 extends: electron-builder.base.yml
 mac:
   target:
@@ -5,22 +7,25 @@ mac:
       arch:
         - universal
   forceCodeSigning: true
+  # 空文字は「CSC_LINK から取り込んだ証明書を自動検出する」の意味（null は署名しない）。
   identity: ''
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
   notarize: true
+# 署名・公証する成果物なので、Electron 本体は非公式ミラーではなく公式配布元から取得する。
+electronDownload:
+  mirror: https://github.com/electron/electron/releases/download/
 dmg:
   artifactName: ${name}-${version}-universal-mac.${ext}
-  title: ${productName} ${version}
-  sign: false
+  # 既定の背景画像（540x380、矢印の中心が y=220）に合わせたウィンドウとアイコン配置。
   window:
     width: 540
     height: 380
   contents:
-    - x: 140
-      y: 190
-    - x: 400
-      y: 190
+    # path 省略時はアプリ本体（tell.app）が対象になる。
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
       type: link
       path: /Applications
