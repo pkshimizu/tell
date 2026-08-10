@@ -10,7 +10,7 @@ This document provides information for developers who want to contribute to tell
 
 ### Requirements
 
-- Node.js 18.0.0 or higher
+- Node.js 20.0.0 or higher (CI builds with Node.js 20)
 - npm 9.0.0 or higher
 - Git
 
@@ -69,21 +69,32 @@ $ npm run test:coverage
 # For Windows
 $ npm run build:win
 
-# For macOS
+# For macOS (unsigned Universal ZIP for local use)
 $ npm run build:mac
-
-# For Linux
-$ npm run build:linux
-
-# For all platforms
-$ npm run build:all
 ```
+
+Release builds use a dedicated configuration that produces a signed and notarized
+Universal DMG. See [Build configuration](#build-configuration).
 
 ### Build Without Packaging (for testing)
 
 ```bash
 $ npm run build:unpack
 ```
+
+### Build configuration
+
+electron-builder settings are split into three files:
+
+| File                           | Purpose                                                                          |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| `electron-builder.base.yml`    | Settings shared by every build (app ID, files, icons, `extendInfo`)              |
+| `electron-builder.yml`         | Default local build: unsigned, non-notarized Universal ZIP (`npm run build:mac`) |
+| `electron-builder.release.yml` | Release build: Developer ID signed and Apple notarized Universal DMG (CI only)   |
+
+The latter two `extends` the base file. `mac.target` is intentionally declared in each
+derived file instead of the base one, because `extends` concatenates arrays — putting it
+in the base would produce both a ZIP and a DMG.
 
 ## Architecture
 
@@ -175,9 +186,8 @@ $ npm run db:studio
 
 4. **Automated Build**
    - GitHub Actions will automatically start and generate binaries:
-     - Windows: `tell-{version}-setup.exe` (x64)
-     - macOS: `tell-{version}.dmg` (Universal: Intel & Apple Silicon)
-     - Linux: AppImage, snap, deb formats
+     - Windows: `tell-{version}-win.exe` (x64)
+     - macOS: `tell-{version}-universal-mac.dmg` (Universal: Intel & Apple Silicon)
    - Generated binaries will be automatically uploaded to the release page
 
 ### Version Management

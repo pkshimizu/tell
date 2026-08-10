@@ -1,39 +1,11 @@
-appId: net.noncore.tell
-productName: tell
-directories:
-  buildResources: build
-files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-asarUnpack:
-  - resources/**
-win:
-  icon: build/icon.ico
-  executableName: tell
-  target:
-    - target: portable
-      arch:
-        - x64
-portable:
-  artifactName: ${name}-${version}-win.${ext}
+# ローカルビルド用の既定設定（未署名・非公証の Universal ZIP）。
+# Apple の資格情報なしで `npm run build:mac` を実行できるようにするためのもの。
+extends: electron-builder.base.yml
 mac:
-  icon: build/icon.png
   target:
     - target: zip
       arch:
         - universal
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
+  # null は「署名しない」の意味（リリース設定の空文字とは意味が異なる）。
   identity: null
-npmRebuild: false
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/

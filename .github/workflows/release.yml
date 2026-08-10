@@ -5,7 +5,7 @@ on:
     types: [published]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check-version:
@@ -26,8 +26,9 @@ jobs:
 
       - name: Get release tag version
         id: tag-version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          RELEASE_TAG="${{ github.event.release.tag_name }}"
           echo "Release tag: $RELEASE_TAG"
 
           # Remove 'release/' prefix if present
@@ -39,10 +40,10 @@ jobs:
           echo "Tag version: $TAG_VERSION"
 
       - name: Verify version consistency
+        env:
+          PACKAGE_VERSION: ${{ steps.get-version.outputs.version }}
+          TAG_VERSION: ${{ steps.tag-version.outputs.tag_version }}
         run: |
-          PACKAGE_VERSION="${{ steps.get-version.outputs.version }}"
-          TAG_VERSION="${{ steps.tag-version.outputs.tag_version }}"
-
           echo "Verifying versions:"
           echo "  package.json: $PACKAGE_VERSION"
           echo "  Release tag:  $TAG_VERSION"
@@ -61,6 +62,8 @@ jobs:
     name: Build Windows
     needs: check-version
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,16 +91,24 @@ jobs:
       - name: Upload to release
         run: |
           $files = Get-ChildItem -Path dist -Filter *.exe
+          if ($files.Count -eq 0) {
+            Write-Error "No .exe artifact found in dist"
+            exit 1
+          }
           foreach ($file in $files) {
-            gh release upload ${{ github.event.release.tag_name }} $file.FullName --clobber
+            gh release upload $env:RELEASE_TAG $file.FullName --clobber
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
 
   build-macos:
     name: Build macOS
     needs: check-version
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -137,9 +148,49 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Verify macOS signature and notarization
+      # DMG のファイル名は electron-builder.release.yml の dmg.artifactName に対応する。
+      # 以降のステップはこの output だけを参照し、パスの二重定義を避ける。
+      - name: Resolve DMG path
+        id: dmg
+        env:
+          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
+        run: echo "path=dist/tell-${RELEASE_VERSION}-universal-mac.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Verify macOS DMG contents
+        shell: bash
+        env:
+          DMG_PATH: ${{ steps.dmg.outputs.path }}
         run: |
-          APP_PATH="dist/mac-universal/tell.app"
+          set -euo pipefail
+
+          MOUNT_POINT="$(mktemp -d)"
+          MOUNTED=0
+
+          cleanup() {
+            if [ "$MOUNTED" = 1 ]; then
+              hdiutil detach "$MOUNT_POINT" || true
+            fi
+            rmdir "$MOUNT_POINT" || true
+          }
+          trap cleanup EXIT
+
+          test -f "$DMG_PATH"
+          hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$MOUNT_POINT"
+          MOUNTED=1
+
+          APP_PATH="$MOUNT_POINT/tell.app"
+          test -d "$APP_PATH"
+          test -L "$MOUNT_POINT/Applications"
+          test "$(readlink "$MOUNT_POINT/Applications")" = "/Applications"
+
+          ARCHS="$(lipo -archs "$APP_PATH/Contents/MacOS/tell")"
+          for arch in x86_64 arm64; do
+            if [[ " $ARCHS " != *" $arch "* ]]; then
+              echo "::error::Missing $arch architecture: $ARCHS"
+              exit 1
+            fi
+          done
+
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           xcrun stapler validate "$APP_PATH"
           spctl --assess --verbose --type exec "$APP_PATH"
@@ -148,16 +199,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: |
-            dist/*.zip
+          path: ${{ steps.dmg.outputs.path }}
+          compression-level: 0
           retention-days: 7
 
       - name: Upload to release
-        run: |
-          for file in dist/*.zip; do
-            if [ -f "$file" ]; then
-              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
-            fi
-          done
+        run: gh release upload "$RELEASE_TAG" "$DMG_PATH" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DMG_PATH: ${{ steps.dmg.outputs.path }}

@@ -29,7 +29,6 @@ npm run fix                    # Run format, lint, and typecheck
 npm run build                  # Type check + production build
 npm run build:mac              # Build macOS app
 npm run build:win              # Build Windows app
-npm run build:linux            # Build Linux app (AppImage, snap, deb)
 npm run build:unpack           # Build without packaging (for testing)
 
 # Database (Drizzle ORM)
@@ -149,10 +148,15 @@ When adding IPC handlers:
 
 ### Application Distribution
 
-- electron-builder configuration in `electron-builder.yml`
-- App ID: `com.electron.app`
-- Supports Windows (NSIS installer), macOS (DMG), and Linux (AppImage/snap/deb)
-- Auto-update capability via electron-updater (configured for generic provider)
+- electron-builder configuration is split into three files:
+  - `electron-builder.base.yml` — settings shared by every build
+  - `electron-builder.yml` — default local build (unsigned, non-notarized Universal ZIP)
+  - `electron-builder.release.yml` — release build (signed and notarized Universal DMG), used by CI
+- App ID: `net.noncore.tell`
+- Distributed artifacts: Windows portable exe (`tell-{version}-win.exe`) and
+  macOS Universal DMG (`tell-{version}-universal-mac.dmg`)
+- `mac.target` is declared in each derived config, not in the base one: `extends`
+  concatenates arrays, so a base-level target would produce both a ZIP and a DMG
 
 ### Database (Drizzle ORM + SQLite)
 

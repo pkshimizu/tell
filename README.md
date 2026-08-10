@@ -36,12 +36,20 @@ tell is a desktop application that helps you stay on top of your GitHub activiti
 
 ## 📥 Installation
 
-### Prerequisites
+### Download a Release
+
+Get the latest binaries from the [GitHub Releases](https://github.com/pkshimizu/tell/releases) page.
+
+- **Windows**: Download `tell-{version}-win.exe` and run it.
+- **macOS**: Download `tell-{version}-universal-mac.dmg` (Universal: Intel & Apple Silicon), open it,
+  drag `tell.app` to the `Applications` folder shown in the DMG window, and launch tell from Applications.
+
+### Build from Source
+
+#### Prerequisites
 
 - [Node.js](https://nodejs.org/) 20 or later
 - [Git](https://git-scm.com/)
-
-### Build from Source
 
 1. **Clone the repository**
 
@@ -153,7 +161,9 @@ To use tell, you need to create a GitHub Personal Access Token:
 #### Application Won't Start
 
 - **Windows**: Check Windows Defender or antivirus settings
-- **macOS**: Allow the app in System Preferences → Security & Privacy
+- **macOS**: Released DMG builds are signed and notarized, so no extra step is needed.
+  If you built the app from source, the binary is unsigned — allow it in
+  System Settings → Privacy & Security.
 
 ### Getting Help
 
