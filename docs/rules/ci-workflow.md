@@ -27,6 +27,11 @@
 依存パッケージのライフサイクルスクリプト（`npm ci` の postinstall など）が動く
 ジョブ全体に配らない。
 
+同じ理由で、`actions/checkout` には `persist-credentials: false` を指定する。
+既定の `true` ではトークンがディスクに保存され、後続のスクリプトから読める。
+checkout 後に git の認証（push・fetch など）が必要なジョブだけ、理由をコメントで
+残したうえで外す。
+
 ## 成果物のアップロードは「無いときに失敗する」形にする
 
 `for file in dist/*.zip; do if [ -f "$file" ]; ...` のようなループは、成果物が
