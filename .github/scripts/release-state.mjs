@@ -71,6 +71,19 @@ function requireNewerThanPublished(version, releases) {
 export function resolveRelease({ mode, version, previousVersion, releases }) {
   if (!parseVersion(version)) throw new Error(`Invalid package.json version: ${version}`)
   const tag = `v${version}`
+
+  // バージョンを上げていない push（依存更新や、リリース PR の revert）では何もしない
+  if (mode === 'push' && previousVersion === version) {
+    return { action: 'skip', tag, reason: `Version ${version} is unchanged.` }
+  }
+  if (
+    mode === 'push' &&
+    parseVersion(previousVersion) &&
+    compareVersions(version, previousVersion) < 0
+  ) {
+    return { action: 'skip', tag, reason: `Version went down to ${version}.` }
+  }
+
   const matches = findReleases(releases, version)
   if (matches.length > 1) {
     throw new Error(`Multiple releases exist for ${version}: ${matches.map((r) => r.tag_name)}`)
@@ -78,9 +91,6 @@ export function resolveRelease({ mode, version, previousVersion, releases }) {
   const existing = matches[0] ?? null
 
   if (mode === 'push') {
-    if (previousVersion === version) {
-      return { action: 'skip', tag, reason: `Version ${version} is unchanged.` }
-    }
     if (existing) {
       throw new Error(
         `A release for ${version} already exists (${existing.tag_name}). ` +
@@ -134,11 +144,11 @@ export function verifyUpload({ mode, tag, sha, releases }) {
       `Draft ${tag} targets ${release.target_commitish}, not ${sha}; a newer run owns it.`
     )
   }
-  const latest = latestPublished(releases, tag)
+  const newestPublished = latestPublished(releases, tag)
   const version = tagVersion(tag)
   return {
     publish: true,
-    latest: !latest || compareVersions(version, latest.version) > 0
+    latest: !newestPublished || compareVersions(version, newestPublished.version) > 0
   }
 }
 
@@ -146,6 +156,7 @@ export function verifyUpload({ mode, tag, sha, releases }) {
 export function verifyPrepare({
   currentVersion,
   nextVersion,
+  branch,
   releases,
   openReleasePrs,
   branchExists
@@ -167,8 +178,13 @@ export function verifyPrepare({
     )
   }
   if (branchExists) {
-    throw new Error(`Branch release/v${nextVersion} already exists. Delete it and try again.`)
+    throw new Error(`Branch ${branch} already exists. Delete it and try again.`)
   }
+}
+
+/** `git/matching-refs/heads/<branch>` の結果（前方一致）から、そのブランチがあるかを判定する。 */
+export function branchExistsIn(refs, branch) {
+  return refs.some((ref) => ref.ref === `refs/heads/${branch}`)
 }
 
 function readJson(path) {
@@ -206,11 +222,10 @@ function main(command) {
     verifyPrepare({
       currentVersion: env.CURRENT_VERSION,
       nextVersion: env.VERSION,
+      branch: env.BRANCH,
       releases,
       openReleasePrs: readJson(env.OPEN_PRS_FILE),
-      branchExists: readJson(env.BRANCH_REFS_FILE).some(
-        (ref) => ref.ref === `refs/heads/release/v${env.VERSION}`
-      )
+      branchExists: branchExistsIn(readJson(env.BRANCH_REFS_FILE), env.BRANCH)
     })
     writeOutputs({ previous_tag: latestPublished(releases)?.tag ?? '' })
   } else {

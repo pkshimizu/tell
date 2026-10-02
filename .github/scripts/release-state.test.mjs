@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  branchExistsIn,
   compareVersions,
   flattenPages,
   latestPublished,
@@ -45,6 +46,25 @@ describe('flattenPages', () => {
   it('merges the pages returned by gh api --paginate --slurp', () => {
     expect(flattenPages([[release('v0.1.0')], [release('v0.0.3')]])).toHaveLength(2)
   })
+
+  it('returns an empty list when there are no releases', () => {
+    expect(flattenPages([[]])).toEqual([])
+  })
+
+  it('returns a list that is not paginated as is', () => {
+    const releases = [release('v0.1.0')]
+    expect(flattenPages(releases)).toBe(releases)
+  })
+})
+
+describe('branchExistsIn', () => {
+  it('matches the branch exactly, not by prefix', () => {
+    const refs = [{ ref: 'refs/heads/release/v0.2.0-rc' }]
+    expect(branchExistsIn(refs, 'release/v0.2.0')).toBe(false)
+    expect(branchExistsIn([...refs, { ref: 'refs/heads/release/v0.2.0' }], 'release/v0.2.0')).toBe(
+      true
+    )
+  })
 })
 
 describe('latestPublished', () => {
@@ -81,6 +101,36 @@ describe('resolveRelease', () => {
       expect(result.action).toBe('skip')
     })
 
+    it('skips an unchanged version even while its releases are duplicated', () => {
+      const result = resolveRelease({
+        mode: 'push',
+        version: '0.1.0',
+        previousVersion: '0.1.0',
+        releases: [release('v0.1.0'), release('release/v0.1.0')]
+      })
+      expect(result.action).toBe('skip')
+    })
+
+    it('skips when the version went down, e.g. a reverted release pull request', () => {
+      const result = resolveRelease({
+        mode: 'push',
+        version: '0.1.0',
+        previousVersion: '0.2.0',
+        releases: published
+      })
+      expect(result).toMatchObject({ action: 'skip', reason: 'Version went down to 0.1.0.' })
+    })
+
+    it('creates a draft when the previous version is unknown', () => {
+      const result = resolveRelease({
+        mode: 'push',
+        version: '0.2.0',
+        previousVersion: null,
+        releases: published
+      })
+      expect(result.action).toBe('create')
+    })
+
     it('creates a draft when the version was bumped', () => {
       const result = resolveRelease({
         mode: 'push',
@@ -100,17 +150,17 @@ describe('resolveRelease', () => {
             previousVersion: '0.1.0',
             releases: [...published, existing]
           })
-        ).toThrow('already exists')
+        ).toThrow('A release for 0.2.0 already exists')
       }
     })
 
-    it('refuses a version that is not newer than the latest published one', () => {
+    it('refuses a bumped version that is not newer than the latest published one', () => {
       expect(() =>
         resolveRelease({
           mode: 'push',
-          version: '0.0.9',
+          version: '0.2.0',
           previousVersion: '0.1.0',
-          releases: published
+          releases: [...published, release('v0.3.0')]
         })
       ).toThrow('not newer')
     })
@@ -146,6 +196,12 @@ describe('resolveRelease', () => {
     it('creates a draft when none exists yet', () => {
       const result = resolveRelease({ mode: 'dispatch', version: '0.2.0', releases: published })
       expect(result.action).toBe('create')
+    })
+
+    it('refuses to create a version that is not newer than the latest published one', () => {
+      expect(() =>
+        resolveRelease({ mode: 'dispatch', version: '0.0.9', releases: published })
+      ).toThrow('not newer')
     })
 
     it('refuses to touch a published release', () => {
@@ -186,6 +242,16 @@ describe('verifyUpload', () => {
     expect(verifyUpload({ mode: 'draft', tag: 'v0.2.0', sha: SHA, releases }).latest).toBe(false)
   })
 
+  it('marks the first release as latest', () => {
+    const releases = [release('v0.2.0', { draft: true, target: SHA })]
+    expect(verifyUpload({ mode: 'draft', tag: 'v0.2.0', sha: SHA, releases }).latest).toBe(true)
+  })
+
+  it('does not mark a version as latest when the same version is published with the legacy tag', () => {
+    const releases = [release('release/v0.2.0'), release('v0.2.0', { draft: true, target: SHA })]
+    expect(verifyUpload({ mode: 'draft', tag: 'v0.2.0', sha: SHA, releases }).latest).toBe(false)
+  })
+
   it('refuses when the draft was published in the meantime', () => {
     expect(() =>
       verifyUpload({
@@ -212,6 +278,13 @@ describe('verifyUpload', () => {
     expect(() => verifyUpload({ mode: 'draft', tag: 'v0.2.0', sha: SHA, releases: [] })).toThrow(
       'found 0'
     )
+    const duplicated = [
+      release('v0.2.0', { draft: true, target: SHA }),
+      release('v0.2.0', { draft: true, target: SHA })
+    ]
+    expect(() =>
+      verifyUpload({ mode: 'draft', tag: 'v0.2.0', sha: SHA, releases: duplicated })
+    ).toThrow('found 2')
   })
 
   it('uploads to a published release for the manual release event without publishing', () => {
@@ -236,6 +309,7 @@ describe('verifyPrepare', () => {
   const base = {
     currentVersion: '0.1.0',
     nextVersion: '0.2.0',
+    branch: 'release/v0.2.0',
     releases: [release('v0.1.0')],
     openReleasePrs: [],
     branchExists: false
@@ -258,7 +332,13 @@ describe('verifyPrepare', () => {
   it('refuses when the next version already has a release', () => {
     expect(() =>
       verifyPrepare({ ...base, releases: [...base.releases, release('v0.2.0', { draft: true })] })
-    ).toThrow('already exists')
+    ).toThrow('A release for 0.2.0 already exists')
+  })
+
+  it('refuses when a newer version than the next one is already published', () => {
+    expect(() =>
+      verifyPrepare({ ...base, releases: [...base.releases, release('v0.3.0')] })
+    ).toThrow('not newer')
   })
 
   it('refuses when another release pull request is open', () => {
@@ -268,6 +348,8 @@ describe('verifyPrepare', () => {
   })
 
   it('refuses when the release branch already exists', () => {
-    expect(() => verifyPrepare({ ...base, branchExists: true })).toThrow('already exists')
+    expect(() => verifyPrepare({ ...base, branchExists: true })).toThrow(
+      'Branch release/v0.2.0 already exists'
+    )
   })
 })

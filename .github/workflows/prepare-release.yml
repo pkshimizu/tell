@@ -34,9 +34,7 @@ jobs:
     steps:
       - name: Require main branch
         if: github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::Run this workflow from the main branch."
-          exit 1
+        run: echo "::error::Run this workflow from the main branch." && exit 1
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -116,6 +114,7 @@ jobs:
           BODY_FILE: ${{ runner.temp }}/pr-body.md
         run: |
           set -euo pipefail
+          # release.yml の「Create or retarget draft」と同じ引数で生成し、プレビューと実際のノートをそろえる
           NOTES_ARGS=(-f tag_name="$TAG" -f target_commitish="$BRANCH")
           if [ -n "$PREVIOUS_TAG" ]; then
             NOTES_ARGS+=(-f previous_tag_name="$PREVIOUS_TAG")

@@ -21,10 +21,15 @@ permissions:
 
 jobs:
   create-release:
-    name: Create Draft Release
+    name: Resolve Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Release への書き込み（Draft の作成・付け替え、アップロード・公開）を直列にする。
+    # upload-release と同じグループにして、確認から公開までの間に付け替えが入らないようにする。
+    concurrency:
+      group: release-write
+      cancel-in-progress: false
     outputs:
       build: ${{ steps.resolve.outputs.build }}
       mode: ${{ steps.resolve.outputs.mode }}
@@ -89,7 +94,8 @@ jobs:
           NOTES_FILE: ${{ runner.temp }}/notes.md
         run: |
           set -euo pipefail
-          # 比較元を明示してノートを生成する（Draft はタグを持たないため target で範囲を決める）
+          # 比較元を明示してノートを生成する（Draft はタグを持たないため target で範囲を決める）。
+          # prepare-release.yml のプレビューと同じ引数で生成する。
           NOTES_ARGS=(-f tag_name="$TAG" -f target_commitish="$SHA")
           if [ -n "$PREVIOUS_TAG" ]; then
             NOTES_ARGS+=(-f previous_tag_name="$PREVIOUS_TAG")
@@ -160,6 +166,8 @@ jobs:
     name: Build Windows
     needs: check-version
     runs-on: windows-latest
+    outputs:
+      exe_path: ${{ steps.exe.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -178,19 +186,30 @@ jobs:
       - name: Build Windows app
         run: npm run build:win
 
+      # exe のファイル名は electron-builder.base.yml の portable.artifactName に対応する。
+      # 以降のステップと upload-release はこの output だけを参照する。
+      - name: Resolve EXE path
+        id: exe
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
+        run: echo "path=dist/tell-${RELEASE_VERSION}-win.exe" >> "$GITHUB_OUTPUT"
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
         with:
           name: windows-build
-          path: |
-            dist/*.exe
+          path: ${{ steps.exe.outputs.path }}
           if-no-files-found: error
+          compression-level: 0
           retention-days: 7
 
   build-macos:
     name: Build macOS
     needs: check-version
     runs-on: macos-latest
+    outputs:
+      dmg_path: ${{ steps.dmg.outputs.path }}
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -233,7 +252,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       # DMG のファイル名は electron-builder.release.yml の dmg.artifactName に対応する。
-      # 以降のステップはこの output だけを参照し、パスの二重定義を避ける。
+      # 以降のステップと upload-release はこの output だけを参照し、パスの二重定義を避ける。
       - name: Resolve DMG path
         id: dmg
         env:
@@ -296,9 +315,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    # 同じタグへの書き込みを直列にする（手動の publish と自動の実行が重なった場合など）
+    # create-release と同じグループ。手動の publish と自動の実行が重なった場合も直列にする
     concurrency:
-      group: release-upload-${{ needs.create-release.outputs.tag }}
+      group: release-write
       cancel-in-progress: false
     steps:
       - name: Checkout code
@@ -306,26 +325,33 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Download build artifacts
+      # ビルドジョブごとに別のディレクトリへ展開し、片方のジョブの artifact が
+      # もう片方の成果物を上書きできないようにする。
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v7
         with:
-          pattern: '*-build'
-          path: dist
-          merge-multiple: true
+          name: windows-build
+          path: release-assets/windows
 
-      # 成果物のファイル名は electron-builder の artifactName に対応する。
-      # 以降のステップはこの output だけを参照する。
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: macos-build
+          path: release-assets/macos
+
+      # ファイル名は各ビルドジョブの output（唯一の定義元）から取り、展開先のディレクトリと組み合わせる。
       - name: Resolve release assets
         id: assets
         shell: bash
         env:
-          VERSION: ${{ needs.check-version.outputs.version }}
+          EXE_PATH: ${{ needs.build-windows.outputs.exe_path }}
+          DMG_PATH: ${{ needs.build-macos.outputs.dmg_path }}
           ASSETS_FILE: ${{ runner.temp }}/assets.txt
         run: |
           set -euo pipefail
           printf '%s\n' \
-            "dist/tell-${VERSION}-win.exe" \
-            "dist/tell-${VERSION}-universal-mac.dmg" > "$ASSETS_FILE"
+            "release-assets/windows/$(basename "$EXE_PATH")" \
+            "release-assets/macos/$(basename "$DMG_PATH")" > "$ASSETS_FILE"
           while IFS= read -r asset; do
             test -f "$asset" || { echo "::error::Missing release asset: $asset"; exit 1; }
           done < "$ASSETS_FILE"
