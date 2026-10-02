@@ -32,5 +32,12 @@ export default tseslint.config(
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
+  {
+    // JavaScript には戻り値の型を書けないため、TypeScript 向けのルールを外す
+    files: ['**/*.{js,mjs,cjs}'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
   eslintConfigPrettier
 )
