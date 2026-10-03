@@ -69,11 +69,13 @@ skip されるので、検証が落ちれば成果物は出ない）。
 ステップを 1 つ作り、以降はそれを参照する。命名規則を変えたときの追従漏れは
 リリース本番でしか顕在化しない。
 
+リリース成果物のファイル名は、ワークフローに直接書かず、
+`.github/scripts/release-state.mjs` の `releaseAssets` から得る（ジョブをまたいでも同じ一覧を
+使う）。electron-builder の `artifactName` との一致は `release-state.test.mjs` で確かめる。
+
 ## 複数ジョブの artifact は名前を指定して別々に受け取る
 
 書き込み権限を持つジョブが、`npm ci` を実行したビルドジョブの artifact を受け取るときは、
 `download-artifact` に `name` を指定し、ジョブごとに別のディレクトリへ展開する。
 `pattern` のワイルドカードと `merge-multiple: true` で 1 か所にまとめると、乗っ取られた
 片方のジョブが追加の artifact で、もう片方の成果物（署名済みの DMG など）を上書きできる。
-成果物のファイル名は `.github/scripts/release-state.mjs` の `releaseAssets` を唯一の定義元にし、
-各ジョブはそこから一覧を得る（ファイル名を直接書かない）。

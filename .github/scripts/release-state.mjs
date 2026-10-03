@@ -186,8 +186,12 @@ export function branchExistsIn(refs, branch) {
   return refs.some((ref) => ref.ref === `refs/heads/${branch}`)
 }
 
+/** Release に成果物を載せる OS。 */
+export const PLATFORMS = ['windows', 'macos']
+
 /**
- * Release に載せる成果物のファイル名。electron-builder の artifactName と対応させる唯一の定義元。
+ * Release に載せる成果物のファイル名。ワークフロー側の唯一の定義元で、electron-builder の
+ * artifactName との一致は release-state.test.mjs で確かめる。
  * 更新情報ファイル（updateInfo）は、参照先の本体より後にアップロードする。
  */
 export function releaseAssets(platform, version) {
@@ -243,7 +247,7 @@ export function parseUpdateInfo(text) {
  * 更新情報ファイルが、今回のバージョンと実際のファイル（sha512・サイズ）を指しているかを確かめる。
  * actualFiles: ファイル名 → { sha512, size }（存在するファイルだけ）
  */
-export function checkUpdateInfo(info, { version, main, actualFiles }) {
+export function verifyUpdateInfo(info, { version, main, actualFiles }) {
   if (info.version !== version) {
     throw new Error(`Update info version ${info.version} does not match ${version}.`)
   }
@@ -262,6 +266,23 @@ export function checkUpdateInfo(info, { version, main, actualFiles }) {
   if (info.sha512 !== mainFile.sha512) {
     throw new Error(`Update info sha512 does not match the entry for ${main}.`)
   }
+}
+
+/** 1 つの OS の成果物のファイル名を、本体 → 更新情報ファイルの順に並べる。 */
+export function assetNames(assets) {
+  return [...assets.binaries, assets.updateInfo]
+}
+
+/**
+ * 全 OS の成果物を、アップロードする順（全 OS の本体 → 全 OS の更新情報ファイル）に並べる。
+ * 更新情報ファイルが、参照先の本体より先に公開済み Release に現れないようにするため。
+ */
+export function uploadOrder(version) {
+  const all = PLATFORMS.map((platform) => ({ platform, ...releaseAssets(platform, version) }))
+  return [
+    ...all.flatMap(({ platform, binaries }) => binaries.map((name) => ({ platform, name }))),
+    ...all.map(({ platform, updateInfo }) => ({ platform, name: updateInfo }))
+  ]
 }
 
 /**

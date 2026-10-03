@@ -195,7 +195,7 @@ jobs:
           ASSETS=$(node .github/scripts/release-cli.mjs assets windows)
           mkdir -p release-assets/windows
           while IFS= read -r name; do
-            cp "dist/$name" "release-assets/windows/$name"
+            mv "dist/$name" "release-assets/windows/$name"
           done <<< "$ASSETS"
           node .github/scripts/release-cli.mjs verify-update-info windows release-assets/windows
 
@@ -265,7 +265,7 @@ jobs:
           ASSETS=$(node .github/scripts/release-cli.mjs assets macos)
           mkdir -p release-assets/macos
           while IFS= read -r name; do
-            cp "dist/$name" "release-assets/macos/$name"
+            mv "dist/$name" "release-assets/macos/$name"
           done <<< "$ASSETS"
           node .github/scripts/release-cli.mjs verify-update-info macos release-assets/macos
           {
@@ -366,7 +366,7 @@ jobs:
 
       # アップロードするファイルと順序を release-state.mjs の一覧から決める（本体が先、
       # 更新情報ファイルが最後）。書き込み権限を持つこのジョブでも更新情報を検証し直す。
-      - name: Resolve release assets
+      - name: Resolve and verify release assets
         id: assets
         shell: bash
         env:
@@ -428,9 +428,19 @@ jobs:
           ASSETS_FILE: ${{ steps.assets.outputs.file }}
         run: |
           set -euo pipefail
-          while IFS= read -r asset; do
-            gh release upload "$TAG" "$asset" --clobber
-          done < "$ASSETS_FILE"
+          # 本体は 1 回の呼び出しでまとめて（並列に）上げ、更新情報ファイルはその後に上げる
+          mapfile -t ASSETS < "$ASSETS_FILE"
+          BINARIES=()
+          UPDATE_INFO=()
+          for asset in "${ASSETS[@]}"; do
+            if [[ "$asset" == *.yml ]]; then
+              UPDATE_INFO+=("$asset")
+            else
+              BINARIES+=("$asset")
+            fi
+          done
+          gh release upload "$TAG" "${BINARIES[@]}" --clobber
+          gh release upload "$TAG" "${UPDATE_INFO[@]}" --clobber
 
       - name: Publish release
         if: steps.verify.outputs.publish == 'true'

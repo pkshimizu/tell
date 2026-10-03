@@ -10,6 +10,7 @@ mac:
     - target: zip
       arch:
         - universal
+  # 変更したら .github/scripts/release-state.mjs の releaseAssets も合わせる（テストで検出する）
   artifactName: ${name}-${version}-universal-mac.${ext}
   forceCodeSigning: true
   # 空文字は「CSC_LINK から取り込んだ証明書を自動検出する」の意味（null は署名しない）。
@@ -21,6 +22,7 @@ mac:
 electronDownload:
   mirror: https://github.com/electron/electron/releases/download/
 dmg:
+  # 変更したら .github/scripts/release-state.mjs の releaseAssets も合わせる（テストで検出する）
   artifactName: ${name}-${version}-universal-mac.${ext}
   # 既定の背景画像（540x380、矢印の中心が y=220）に合わせたウィンドウとアイコン配置。
   window:

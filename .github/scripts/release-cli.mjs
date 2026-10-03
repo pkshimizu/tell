@@ -1,26 +1,37 @@
-// release-state.mjs の判定をワークフローから呼ぶための CLI。
-// 入力は環境変数とファイル、結果は標準出力と $GITHUB_OUTPUT に書く。失敗したら
-// ::error:: を出して終了コード 1 で終わる。依存パッケージは使わない。
+// release-state.mjs の判定をワークフローから呼ぶための CLI。依存パッケージは使わない。
+// 対象の OS とディレクトリは引数、実行時の文脈（VERSION・MODE など）と入力ファイルは環境変数で
+// 受け取る。結果は標準出力と $GITHUB_OUTPUT に書き、失敗したら ::error:: を標準エラーに出して
+// 終了コード 1 で終わる（標準出力を $(...) で受ける呼び出し側でもエラーがログに残るように）。
 //
 //   node .github/scripts/release-cli.mjs <command> [args...]
+//
+//   resolve                         MODE, VERSION, PREVIOUS_VERSION, RELEASES_FILE
+//   verify-upload                   MODE, TAG, SHA, RELEASES_FILE
+//   verify-prepare                  CURRENT_VERSION, VERSION, BRANCH, RELEASES_FILE,
+//                                   OPEN_PRS_FILE, BRANCH_REFS_FILE
+//   assets <platform>               VERSION                 ファイル名を 1 行ずつ出す
+//   verify-update-info <platform> <dir>  VERSION            成果物と latest*.yml を照合する
+//   upload-list <root>              VERSION                 アップロードするパスを順に出す
+//   assets-to-delete                MODE, VERSION, EXISTING_FILE
 
 import { createHash } from 'node:crypto'
 import { appendFileSync, createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  PLATFORMS,
+  assetNames,
   assetsToDelete,
   branchExistsIn,
-  checkUpdateInfo,
   flattenPages,
   latestPublished,
   parseUpdateInfo,
   releaseAssets,
   resolveRelease,
+  uploadOrder,
   verifyPrepare,
+  verifyUpdateInfo,
   verifyUpload
 } from './release-state.mjs'
-
-const PLATFORMS = ['windows', 'macos']
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -51,9 +62,9 @@ function requireFile(path) {
 }
 
 /** 1 つの OS の成果物がそろい、更新情報ファイルが実際のファイルを指していることを確かめる。 */
-async function verifyUpdateInfo(platform, dir, version) {
+async function verifyPlatformAssets(platform, dir, version) {
   const assets = releaseAssets(platform, version)
-  for (const name of [...assets.binaries, assets.updateInfo]) requireFile(join(dir, name))
+  for (const name of assetNames(assets)) requireFile(join(dir, name))
 
   const info = parseUpdateInfo(readFileSync(join(dir, assets.updateInfo), 'utf8'))
   const actualFiles = {}
@@ -63,7 +74,7 @@ async function verifyUpdateInfo(platform, dir, version) {
       actualFiles[file.url] = { sha512: await sha512(path), size: statSync(path).size }
     }
   }
-  checkUpdateInfo(info, { version, main: assets.main, actualFiles })
+  verifyUpdateInfo(info, { version, main: assets.main, actualFiles })
   console.log(`Verified ${join(dir, assets.updateInfo)}`)
 }
 
@@ -106,22 +117,14 @@ async function main(argv, env) {
     writeOutputs(env, { previous_tag: latestPublished(releases)?.tag ?? '' })
   } else if (command === 'assets') {
     // 指定 OS の成果物のファイル名を、本体 → 更新情報ファイルの順に 1 行ずつ出す
-    const assets = releaseAssets(args[0], env.VERSION)
-    for (const name of [...assets.binaries, assets.updateInfo]) console.log(name)
+    for (const name of assetNames(releaseAssets(args[0], env.VERSION))) console.log(name)
   } else if (command === 'verify-update-info') {
-    await verifyUpdateInfo(args[0], args[1], env.VERSION)
+    await verifyPlatformAssets(args[0], args[1], env.VERSION)
   } else if (command === 'upload-list') {
     // 全 OS の成果物のパスを、本体をすべて先に、更新情報ファイルを最後にして 1 行ずつ出す。
     // 各 OS のファイルは <root>/<platform>/ からだけ取る。
-    const root = args[0]
-    const all = PLATFORMS.map((platform) => ({ platform, ...releaseAssets(platform, env.VERSION) }))
-    const paths = [
-      ...all.flatMap(({ platform, binaries }) =>
-        binaries.map((name) => join(root, platform, name))
-      ),
-      ...all.map(({ platform, updateInfo }) => join(root, platform, updateInfo))
-    ]
-    for (const path of paths) {
+    for (const { platform, name } of uploadOrder(env.VERSION)) {
+      const path = join(args[0], platform, name)
       requireFile(path)
       console.log(path)
     }
@@ -131,7 +134,7 @@ async function main(argv, env) {
     const names = assetsToDelete({
       mode: env.MODE,
       existing,
-      expected: all.flatMap(({ binaries, updateInfo }) => [...binaries, updateInfo]),
+      expected: all.flatMap(assetNames),
       updateInfo: all.map(({ updateInfo }) => updateInfo)
     })
     for (const name of names) console.log(name)
@@ -143,6 +146,6 @@ async function main(argv, env) {
 try {
   await main(process.argv.slice(2), process.env)
 } catch (error) {
-  console.log(`::error::${error.message}`)
+  console.error(`::error::${error.message}`)
   process.exit(1)
 }

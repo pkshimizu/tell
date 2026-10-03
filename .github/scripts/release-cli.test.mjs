@@ -44,6 +44,44 @@ function writeWindowsAssets(root, version = '0.2.0') {
   return windows
 }
 
+function writeMacAssets(root, version = '0.2.0') {
+  const macos = join(root, 'macos')
+  mkdirSync(macos, { recursive: true })
+  const zipName = `tell-${version}-universal-mac.zip`
+  const dmgName = `tell-${version}-universal-mac.dmg`
+  const zip = writeAsset(join(macos, zipName), 'zip')
+  const dmg = writeAsset(join(macos, dmgName), 'dmg')
+  writeAsset(join(macos, `${zipName}.blockmap`), 'blockmap')
+  writeFileSync(
+    join(macos, 'latest-mac.yml'),
+    [
+      `version: ${version}`,
+      'files:',
+      `  - url: ${zipName}`,
+      `    sha512: ${zip.sha512}`,
+      `    size: ${zip.size}`,
+      `  - url: ${dmgName}`,
+      `    sha512: ${dmg.sha512}`,
+      `    size: ${dmg.size}`,
+      `path: ${zipName}`,
+      `sha512: ${zip.sha512}`
+    ].join('\n')
+  )
+  return macos
+}
+
+function writeReleases(releases) {
+  const path = join(dir, 'releases.json')
+  writeFileSync(path, JSON.stringify([releases]))
+  return path
+}
+
+function readOutput() {
+  const output = join(dir, 'output.txt')
+  writeFileSync(output, '')
+  return { output, read: () => readFileSync(output, 'utf8') }
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'release-cli-'))
 })
@@ -71,13 +109,22 @@ describe('release-cli', () => {
     writeFileSync(join(windows, 'tell-0.2.0-win-setup.exe'), 'tampered')
     const result = run(['verify-update-info', 'windows', windows], { VERSION: '0.2.0' })
     expect(result.status).toBe(1)
-    expect(result.stdout).toContain('::error::Update info does not match the contents')
+    expect(result.stderr).toContain('::error::Update info does not match the contents')
+  })
+
+  it('verifies the macOS update info, including the DMG entry', () => {
+    const macos = writeMacAssets(dir)
+    expect(run(['verify-update-info', 'macos', macos], { VERSION: '0.2.0' }).status).toBe(0)
+    writeFileSync(join(macos, 'tell-0.2.0-universal-mac.dmg'), 'tampered')
+    const result = run(['verify-update-info', 'macos', macos], { VERSION: '0.2.0' })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('does not match the contents of tell-0.2.0-universal-mac.dmg')
   })
 
   it('fails when an expected asset is missing', () => {
     const result = run(['verify-update-info', 'windows', dir], { VERSION: '0.2.0' })
     expect(result.status).toBe(1)
-    expect(result.stdout).toContain('::error::Missing release asset')
+    expect(result.stderr).toContain('::error::Missing release asset')
   })
 
   it('lists every binary before any update info file', () => {
@@ -100,6 +147,72 @@ describe('release-cli', () => {
       join(macos, 'latest-mac.yml')
     ])
     expect(names).toHaveLength(7)
+  })
+
+  it('fails to list uploads when an asset is missing', () => {
+    writeWindowsAssets(dir)
+    const result = run(['upload-list', dir], { VERSION: '0.2.0' })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('::error::Missing release asset')
+  })
+
+  it('writes verify-upload results for a draft and for the manual release event', () => {
+    const sha = 'a'.repeat(40)
+    const draft = readOutput()
+    execFileSync(process.execPath, [CLI, 'verify-upload'], {
+      env: {
+        PATH: process.env.PATH,
+        MODE: 'draft',
+        TAG: 'v0.2.0',
+        SHA: sha,
+        RELEASES_FILE: writeReleases([
+          { tag_name: 'v0.2.1', draft: false },
+          { tag_name: 'v0.2.0', draft: true, target_commitish: sha }
+        ]),
+        GITHUB_OUTPUT: draft.output
+      }
+    })
+    expect(draft.read()).toBe('publish=true\nlatest=false\n')
+
+    const event = readOutput()
+    execFileSync(process.execPath, [CLI, 'verify-upload'], {
+      env: {
+        PATH: process.env.PATH,
+        MODE: 'event',
+        TAG: 'v0.2.0',
+        SHA: sha,
+        RELEASES_FILE: writeReleases([{ tag_name: 'v0.2.0', draft: false }]),
+        GITHUB_OUTPUT: event.output
+      }
+    })
+    expect(event.read()).toBe('publish=false\nlatest=false\n')
+  })
+
+  it('checks the open pull requests and the branch in verify-prepare', () => {
+    const openPrs = join(dir, 'open-prs.json')
+    const branchRefs = join(dir, 'branch-refs.json')
+    const env = {
+      CURRENT_VERSION: '0.1.0',
+      VERSION: '0.2.0',
+      BRANCH: 'release/v0.2.0',
+      RELEASES_FILE: writeReleases([{ tag_name: 'v0.1.0', draft: false }]),
+      OPEN_PRS_FILE: openPrs,
+      BRANCH_REFS_FILE: branchRefs
+    }
+    writeFileSync(openPrs, '[]')
+    writeFileSync(branchRefs, JSON.stringify([{ ref: 'refs/heads/release/v0.2.0-rc' }]))
+    const ok = readOutput()
+    execFileSync(process.execPath, [CLI, 'verify-prepare'], {
+      env: { PATH: process.env.PATH, ...env, GITHUB_OUTPUT: ok.output }
+    })
+    expect(ok.read()).toBe('previous_tag=v0.1.0\n')
+
+    writeFileSync(branchRefs, JSON.stringify([{ ref: 'refs/heads/release/v0.2.0' }]))
+    expect(run(['verify-prepare'], env).stderr).toContain('Branch release/v0.2.0 already exists')
+
+    writeFileSync(branchRefs, '[]')
+    writeFileSync(openPrs, JSON.stringify([{ url: 'https://example.com/pull/1' }]))
+    expect(run(['verify-prepare'], env).stderr).toContain('Another release pull request')
   })
 
   it('prints the assets to delete from a draft', () => {
@@ -136,6 +249,6 @@ describe('release-cli', () => {
   it('fails on an unknown command', () => {
     const result = run(['unknown'])
     expect(result.status).toBe(1)
-    expect(result.stdout).toContain('::error::Unknown command: unknown')
+    expect(result.stderr).toContain('::error::Unknown command: unknown')
   })
 })

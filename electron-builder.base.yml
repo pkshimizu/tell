@@ -26,6 +26,7 @@ win:
       arch:
         - x64
 nsis:
+  # 変更したら .github/scripts/release-state.mjs の releaseAssets も合わせる（テストで検出する）
   artifactName: ${name}-${version}-win-setup.${ext}
 # mac.target は各派生設定で定義する。
 # extends のマージは配列を「結合」するため、ここに置くと子側で上書きできず
