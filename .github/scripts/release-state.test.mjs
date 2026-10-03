@@ -1,11 +1,18 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
+  assetNames,
+  assetsToDelete,
   branchExistsIn,
+  verifyUpdateInfo,
   compareVersions,
   flattenPages,
   latestPublished,
+  parseUpdateInfo,
+  releaseAssets,
   resolveRelease,
   tagVersion,
+  uploadOrder,
   verifyPrepare,
   verifyUpload
 } from './release-state.mjs'
@@ -293,6 +300,15 @@ describe('verifyUpload', () => {
     ).toEqual({ publish: false, latest: false })
   })
 
+  it.each(['release/v0.2.0', '0.2.0'])(
+    'refuses the manual release event for the %s tag that is not in the v format',
+    (tag) => {
+      expect(() =>
+        verifyUpload({ mode: 'event', tag, sha: SHA, releases: [release(tag)] })
+      ).toThrow('tag format')
+    }
+  )
+
   it('refuses the manual release event while the release is a draft', () => {
     expect(() =>
       verifyUpload({
@@ -351,5 +367,244 @@ describe('verifyPrepare', () => {
     expect(() => verifyPrepare({ ...base, branchExists: true })).toThrow(
       'Branch release/v0.2.0 already exists'
     )
+  })
+})
+
+describe('releaseAssets', () => {
+  it('lists the Windows installer, its blockmap and latest.yml', () => {
+    expect(releaseAssets('windows', '0.2.0')).toEqual({
+      main: 'tell-0.2.0-win-setup.exe',
+      binaries: ['tell-0.2.0-win-setup.exe', 'tell-0.2.0-win-setup.exe.blockmap'],
+      updateInfo: 'latest.yml'
+    })
+  })
+
+  it('lists the macOS DMG, the ZIP used for updates, its blockmap and latest-mac.yml', () => {
+    expect(releaseAssets('macos', '0.2.0')).toEqual({
+      main: 'tell-0.2.0-universal-mac.zip',
+      binaries: [
+        'tell-0.2.0-universal-mac.dmg',
+        'tell-0.2.0-universal-mac.zip',
+        'tell-0.2.0-universal-mac.zip.blockmap'
+      ],
+      updateInfo: 'latest-mac.yml'
+    })
+  })
+
+  it('rejects unknown platforms and invalid versions', () => {
+    expect(() => releaseAssets('linux', '0.2.0')).toThrow('Unknown platform')
+    expect(() => releaseAssets('windows', '0.2')).toThrow('Invalid version')
+  })
+
+  // ファイル名は electron-builder の artifactName と releaseAssets の二重定義なので、
+  // 設定を変えたときのずれをリリース本番より前に検出する
+  describe('matches the electron-builder configs', () => {
+    function section(file, key) {
+      const text = readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8')
+      const match = new RegExp(`^${key}:\\n((?:(?: .*)?\\n)*)`, 'm').exec(text)
+      if (!match) throw new Error(`Section ${key} is not in ${file}`)
+      return match[1]
+    }
+    function artifactName(file, key) {
+      const pattern = /^ {2}artifactName: (\S+)$/m.exec(section(file, key))?.[1]
+      return pattern?.replace('${name}', 'tell').replace('${version}', '0.2.0')
+    }
+    function targets(file, key) {
+      return [...section(file, key).matchAll(/- target: (\w+)/g)].map((match) => match[1])
+    }
+
+    it('builds the Windows installer that releaseAssets expects', () => {
+      expect(targets('electron-builder.base.yml', 'win')).toEqual(['nsis'])
+      expect(artifactName('electron-builder.base.yml', 'nsis')).toBe(
+        releaseAssets('windows', '0.2.0').main.replace(/exe$/, '${ext}')
+      )
+    })
+
+    it('builds the macOS DMG and ZIP that releaseAssets expects', () => {
+      const [dmg, zip] = releaseAssets('macos', '0.2.0').binaries
+      expect(targets('electron-builder.release.yml', 'mac')).toEqual(['dmg', 'zip'])
+      expect(artifactName('electron-builder.release.yml', 'dmg')).toBe(
+        dmg.replace(/dmg$/, '${ext}')
+      )
+      expect(artifactName('electron-builder.release.yml', 'mac')).toBe(
+        zip.replace(/zip$/, '${ext}')
+      )
+    })
+  })
+})
+
+describe('parseUpdateInfo', () => {
+  const text = [
+    'version: 0.2.0',
+    'files:',
+    '  - url: tell-0.2.0-universal-mac.zip',
+    '    sha512: ZIPHASH==',
+    '    size: 200',
+    '  - url: tell-0.2.0-universal-mac.dmg',
+    '    sha512: DMGHASH==',
+    '    size: 300',
+    'path: tell-0.2.0-universal-mac.zip',
+    'sha512: ZIPHASH==',
+    "releaseDate: '2026-10-03T09:57:51.716Z'"
+  ]
+
+  it('reads the top-level keys and every files entry', () => {
+    expect(parseUpdateInfo(text.join('\n'))).toEqual({
+      version: '0.2.0',
+      path: 'tell-0.2.0-universal-mac.zip',
+      sha512: 'ZIPHASH==',
+      releaseDate: '2026-10-03T09:57:51.716Z',
+      files: [
+        { url: 'tell-0.2.0-universal-mac.zip', sha512: 'ZIPHASH==', size: '200' },
+        { url: 'tell-0.2.0-universal-mac.dmg', sha512: 'DMGHASH==', size: '300' }
+      ]
+    })
+  })
+
+  it('does not mix keys of other top-level sections into files', () => {
+    const info = parseUpdateInfo(
+      [
+        'version: 0.2.0',
+        'files:',
+        '  - url: a.zip',
+        '    size: 1',
+        'other:',
+        '  - url: b.zip',
+        '    size: 2',
+        'empty:',
+        'path: a.zip'
+      ].join('\n')
+    )
+    expect(info.files).toEqual([{ url: 'a.zip', size: '1' }])
+    expect(info).not.toHaveProperty('empty')
+    expect(info.path).toBe('a.zip')
+  })
+
+  it('accepts CRLF line endings', () => {
+    expect(parseUpdateInfo(text.join('\r\n')).files).toHaveLength(2)
+  })
+})
+
+describe('verifyUpdateInfo', () => {
+  const main = 'tell-0.2.0-win-setup.exe'
+  const info = {
+    version: '0.2.0',
+    path: main,
+    sha512: 'HASH==',
+    files: [{ url: main, sha512: 'HASH==', size: '100' }]
+  }
+  const actualFiles = { [main]: { sha512: 'HASH==', size: 100 } }
+
+  it('passes when the version, path and contents match', () => {
+    expect(() => verifyUpdateInfo(info, { version: '0.2.0', main, actualFiles })).not.toThrow()
+  })
+
+  it('rejects another version', () => {
+    expect(() => verifyUpdateInfo(info, { version: '0.2.1', main, actualFiles })).toThrow(
+      'does not match 0.2.1'
+    )
+  })
+
+  it('rejects a path that is not the expected main file', () => {
+    expect(() =>
+      verifyUpdateInfo(info, { version: '0.2.0', main: 'tell-0.2.0-win.exe', actualFiles })
+    ).toThrow('is not tell-0.2.0-win.exe')
+  })
+
+  it('rejects update info whose files do not include the main file', () => {
+    expect(() =>
+      verifyUpdateInfo(
+        { ...info, files: [{ url: 'other.exe', sha512: 'HASH==', size: '100' }] },
+        { version: '0.2.0', main, actualFiles }
+      )
+    ).toThrow('files do not include')
+  })
+
+  it('checks every entry, not only the main file', () => {
+    const zip = 'tell-0.2.0-universal-mac.zip'
+    const dmg = 'tell-0.2.0-universal-mac.dmg'
+    const macInfo = {
+      version: '0.2.0',
+      path: zip,
+      sha512: 'ZIP==',
+      files: [
+        { url: zip, sha512: 'ZIP==', size: '1' },
+        { url: dmg, sha512: 'DMG==', size: '2' }
+      ]
+    }
+    expect(() =>
+      verifyUpdateInfo(macInfo, {
+        version: '0.2.0',
+        main: zip,
+        actualFiles: { [zip]: { sha512: 'ZIP==', size: 1 }, [dmg]: { sha512: 'OTHER==', size: 2 } }
+      })
+    ).toThrow(`does not match the contents of ${dmg}`)
+  })
+
+  it('rejects a referenced file that does not exist', () => {
+    expect(() => verifyUpdateInfo(info, { version: '0.2.0', main, actualFiles: {} })).toThrow(
+      'missing file'
+    )
+  })
+
+  it('rejects a file whose contents changed after the update info was written', () => {
+    for (const changed of [
+      { sha512: 'OTHER==', size: 100 },
+      { sha512: 'HASH==', size: 101 }
+    ]) {
+      expect(() =>
+        verifyUpdateInfo(info, { version: '0.2.0', main, actualFiles: { [main]: changed } })
+      ).toThrow('does not match the contents')
+    }
+  })
+
+  it('rejects a top-level sha512 that differs from the main entry', () => {
+    expect(() =>
+      verifyUpdateInfo({ ...info, sha512: 'OTHER==' }, { version: '0.2.0', main, actualFiles })
+    ).toThrow('sha512 does not match the entry')
+  })
+})
+
+describe('assetsToDelete', () => {
+  const expected = ['tell-0.2.0-win-setup.exe', 'latest.yml']
+  const updateInfo = ['latest.yml', 'latest-mac.yml']
+  const existing = ['tell-0.2.0-win-setup.exe', 'latest.yml', 'tell-0.2.0-win.exe']
+
+  it('removes update info and stale assets from a draft', () => {
+    expect(assetsToDelete({ mode: 'draft', existing, expected, updateInfo })).toEqual([
+      'latest.yml',
+      'tell-0.2.0-win.exe'
+    ])
+  })
+
+  it('removes only update info from a manually published release', () => {
+    expect(assetsToDelete({ mode: 'event', existing, expected, updateInfo })).toEqual([
+      'latest.yml'
+    ])
+  })
+})
+
+describe('uploadOrder', () => {
+  it('uploads every binary of every platform before any update info file', () => {
+    const order = uploadOrder('0.2.0')
+    const firstUpdateInfo = order.findIndex(({ name }) => name.endsWith('.yml'))
+    expect(order.slice(firstUpdateInfo)).toEqual([
+      { platform: 'windows', name: 'latest.yml' },
+      { platform: 'macos', name: 'latest-mac.yml' }
+    ])
+    expect(order.slice(0, firstUpdateInfo).map(({ name }) => name)).toEqual([
+      ...releaseAssets('windows', '0.2.0').binaries,
+      ...releaseAssets('macos', '0.2.0').binaries
+    ])
+  })
+})
+
+describe('assetNames', () => {
+  it('lists the binaries followed by the update info file', () => {
+    expect(assetNames(releaseAssets('windows', '0.2.0'))).toEqual([
+      'tell-0.2.0-win-setup.exe',
+      'tell-0.2.0-win-setup.exe.blockmap',
+      'latest.yml'
+    ])
   })
 })

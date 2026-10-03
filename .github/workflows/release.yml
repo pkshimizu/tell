@@ -78,7 +78,7 @@ jobs:
           fi
 
           gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
-          node .github/scripts/release-state.mjs resolve
+          node .github/scripts/release-cli.mjs resolve
           echo "mode=draft" >> "$GITHUB_OUTPUT"
 
       - name: Create or retarget draft
@@ -166,8 +166,6 @@ jobs:
     name: Build Windows
     needs: check-version
     runs-on: windows-latest
-    outputs:
-      exe_path: ${{ steps.exe.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -186,20 +184,26 @@ jobs:
       - name: Build Windows app
         run: npm run build:win
 
-      # exe のファイル名は electron-builder.base.yml の portable.artifactName に対応する。
-      # 以降のステップと upload-release はこの output だけを参照する。
-      - name: Resolve EXE path
-        id: exe
+      # 成果物のファイル名は release-state.mjs の releaseAssets が唯一の定義元。
+      # その一覧に従って集め、latest.yml が実際のファイルを指していることを確かめる。
+      - name: Collect release assets
         shell: bash
         env:
-          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
-        run: echo "path=dist/tell-${RELEASE_VERSION}-win.exe" >> "$GITHUB_OUTPUT"
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ASSETS=$(node .github/scripts/release-cli.mjs assets windows)
+          mkdir -p release-assets/windows
+          while IFS= read -r name; do
+            mv "dist/$name" "release-assets/windows/$name"
+          done <<< "$ASSETS"
+          node .github/scripts/release-cli.mjs verify-update-info windows release-assets/windows
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
         with:
           name: windows-build
-          path: ${{ steps.exe.outputs.path }}
+          path: release-assets/windows
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -208,8 +212,6 @@ jobs:
     name: Build macOS
     needs: check-version
     runs-on: macos-latest
-    outputs:
-      dmg_path: ${{ steps.dmg.outputs.path }}
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -251,22 +253,38 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      # DMG のファイル名は electron-builder.release.yml の dmg.artifactName に対応する。
-      # 以降のステップと upload-release はこの output だけを参照し、パスの二重定義を避ける。
-      - name: Resolve DMG path
-        id: dmg
-        env:
-          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
-        run: echo "path=dist/tell-${RELEASE_VERSION}-universal-mac.dmg" >> "$GITHUB_OUTPUT"
-
-      - name: Verify macOS DMG contents
+      # 成果物のファイル名は release-state.mjs の releaseAssets が唯一の定義元。
+      # その一覧に従って集め、latest-mac.yml が実際のファイルを指していることを確かめる。
+      - name: Collect release assets
+        id: collect
         shell: bash
         env:
-          DMG_PATH: ${{ steps.dmg.outputs.path }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ASSETS=$(node .github/scripts/release-cli.mjs assets macos)
+          mkdir -p release-assets/macos
+          while IFS= read -r name; do
+            mv "dist/$name" "release-assets/macos/$name"
+          done <<< "$ASSETS"
+          node .github/scripts/release-cli.mjs verify-update-info macos release-assets/macos
+          {
+            echo "dmg=release-assets/macos/$(grep -m1 '\.dmg$' <<< "$ASSETS")"
+            echo "zip=release-assets/macos/$(grep -m1 '\.zip$' <<< "$ASSETS")"
+          } >> "$GITHUB_OUTPUT"
+
+      # 手動インストール用の DMG と、自動更新で展開される ZIP の両方について、
+      # 中の app のアーキテクチャ・署名・公証・Gatekeeper を確かめる。
+      - name: Verify macOS app in DMG and ZIP
+        shell: bash
+        env:
+          DMG_PATH: ${{ steps.collect.outputs.dmg }}
+          ZIP_PATH: ${{ steps.collect.outputs.zip }}
         run: |
           set -euo pipefail
 
           MOUNT_POINT="$(mktemp -d)"
+          EXTRACT_DIR="$(mktemp -d)"
           MOUNTED=0
 
           cleanup() {
@@ -274,35 +292,42 @@ jobs:
               hdiutil detach "$MOUNT_POINT" || true
             fi
             rmdir "$MOUNT_POINT" || true
+            rm -rf "$EXTRACT_DIR" || true
           }
           trap cleanup EXIT
+
+          verify_app() {
+            local app_path="$1"
+            test -d "$app_path"
+            local archs
+            archs="$(lipo -archs "$app_path/Contents/MacOS/tell")"
+            for arch in x86_64 arm64; do
+              if [[ " $archs " != *" $arch "* ]]; then
+                echo "::error::Missing $arch architecture in $app_path: $archs"
+                exit 1
+              fi
+            done
+            codesign --verify --deep --strict --verbose=2 "$app_path"
+            xcrun stapler validate "$app_path"
+            spctl --assess --verbose --type exec "$app_path"
+          }
 
           test -f "$DMG_PATH"
           hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$MOUNT_POINT"
           MOUNTED=1
-
-          APP_PATH="$MOUNT_POINT/tell.app"
-          test -d "$APP_PATH"
           test -L "$MOUNT_POINT/Applications"
           test "$(readlink "$MOUNT_POINT/Applications")" = "/Applications"
+          verify_app "$MOUNT_POINT/tell.app"
 
-          ARCHS="$(lipo -archs "$APP_PATH/Contents/MacOS/tell")"
-          for arch in x86_64 arm64; do
-            if [[ " $ARCHS " != *" $arch "* ]]; then
-              echo "::error::Missing $arch architecture: $ARCHS"
-              exit 1
-            fi
-          done
-
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          xcrun stapler validate "$APP_PATH"
-          spctl --assess --verbose --type exec "$APP_PATH"
+          test -f "$ZIP_PATH"
+          ditto -x -k "$ZIP_PATH" "$EXTRACT_DIR"
+          verify_app "$EXTRACT_DIR/tell.app"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v7
         with:
           name: macos-build
-          path: ${{ steps.dmg.outputs.path }}
+          path: release-assets/macos
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -339,22 +364,20 @@ jobs:
           name: macos-build
           path: release-assets/macos
 
-      # ファイル名は各ビルドジョブの output（唯一の定義元）から取り、展開先のディレクトリと組み合わせる。
-      - name: Resolve release assets
+      # アップロードするファイルと順序を release-state.mjs の一覧から決める（本体が先、
+      # 更新情報ファイルが最後）。書き込み権限を持つこのジョブでも更新情報を検証し直す。
+      - name: Resolve and verify release assets
         id: assets
         shell: bash
         env:
-          EXE_PATH: ${{ needs.build-windows.outputs.exe_path }}
-          DMG_PATH: ${{ needs.build-macos.outputs.dmg_path }}
+          VERSION: ${{ needs.check-version.outputs.version }}
           ASSETS_FILE: ${{ runner.temp }}/assets.txt
         run: |
           set -euo pipefail
-          printf '%s\n' \
-            "release-assets/windows/$(basename "$EXE_PATH")" \
-            "release-assets/macos/$(basename "$DMG_PATH")" > "$ASSETS_FILE"
-          while IFS= read -r asset; do
-            test -f "$asset" || { echo "::error::Missing release asset: $asset"; exit 1; }
-          done < "$ASSETS_FILE"
+          node .github/scripts/release-cli.mjs upload-list release-assets > "$ASSETS_FILE"
+          for platform in windows macos; do
+            node .github/scripts/release-cli.mjs verify-update-info "$platform" "release-assets/$platform"
+          done
           echo "file=$ASSETS_FILE" >> "$GITHUB_OUTPUT"
 
       # 別の実行による付け替え・公開や、手での公開の後に古い成果物で上書きしないよう、
@@ -372,7 +395,29 @@ jobs:
         run: |
           set -euo pipefail
           gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
-          node .github/scripts/release-state.mjs verify-upload
+          node .github/scripts/release-cli.mjs verify-upload
+
+      # 更新情報ファイルを先に消し、本体を上げ終えてから最後に上げ直す（上げ直しの途中で
+      # 古い latest*.yml が新しい本体を指して sha512 が食い違う時間を作らないため）。
+      # Draft では、今回の一覧に無い古いアセットも消す。
+      - name: Remove assets to be replaced
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          MODE: ${{ needs.create-release.outputs.mode }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+          EXISTING_FILE: ${{ runner.temp }}/existing-assets.txt
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --json assets --jq '.assets[].name' > "$EXISTING_FILE"
+          DELETE=$(node .github/scripts/release-cli.mjs assets-to-delete)
+          while IFS= read -r name; do
+            if [ -n "$name" ]; then
+              gh release delete-asset "$TAG" "$name" --yes
+            fi
+          done <<< "$DELETE"
 
       - name: Upload to release
         shell: bash
@@ -383,9 +428,19 @@ jobs:
           ASSETS_FILE: ${{ steps.assets.outputs.file }}
         run: |
           set -euo pipefail
-          while IFS= read -r asset; do
-            gh release upload "$TAG" "$asset" --clobber
-          done < "$ASSETS_FILE"
+          # 本体は 1 回の呼び出しでまとめて（並列に）上げ、更新情報ファイルはその後に上げる
+          mapfile -t ASSETS < "$ASSETS_FILE"
+          BINARIES=()
+          UPDATE_INFO=()
+          for asset in "${ASSETS[@]}"; do
+            if [[ "$asset" == *.yml ]]; then
+              UPDATE_INFO+=("$asset")
+            else
+              BINARIES+=("$asset")
+            fi
+          done
+          gh release upload "$TAG" "${BINARIES[@]}" --clobber
+          gh release upload "$TAG" "${UPDATE_INFO[@]}" --clobber
 
       - name: Publish release
         if: steps.verify.outputs.publish == 'true'
