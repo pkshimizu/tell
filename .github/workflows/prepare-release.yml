@@ -1,0 +1,141 @@
+name: Prepare Release
+
+# package.json のバージョンを上げたリリース PR を作る。PR を main にマージすると
+# release.yml が Draft Release の作成からビルド・公開までを行う。
+# GITHUB_TOKEN で PR を作るため、リポジトリ設定の
+# 「Allow GitHub Actions to create and approve pull requests」を有効にしておく。
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 上げるバージョンの種類
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Create Release Pull Request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Require main branch
+        if: github.ref != 'refs/heads/main'
+        run: echo "::error::Run this workflow from the main branch." && exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          # リリース用ブランチを push するため認証情報を残す。
+          # このジョブは npm ci を実行せず、依存パッケージのスクリプトは動かない。
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+
+      - name: Bump version
+        id: bump
+        shell: bash
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          npm version "$BUMP" --no-git-tag-version --ignore-scripts
+          VERSION=$(node -p "require('./package.json').version")
+          {
+            echo "current_version=$CURRENT_VERSION"
+            echo "version=$VERSION"
+            echo "tag=v$VERSION"
+            echo "branch=release/v$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check release preconditions
+        id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT_VERSION: ${{ steps.bump.outputs.current_version }}
+          VERSION: ${{ steps.bump.outputs.version }}
+          BRANCH: ${{ steps.bump.outputs.branch }}
+          RELEASES_FILE: ${{ runner.temp }}/releases.json
+          OPEN_PRS_FILE: ${{ runner.temp }}/open-prs.json
+          BRANCH_REFS_FILE: ${{ runner.temp }}/branch-refs.json
+        run: |
+          set -euo pipefail
+          if ! gh label list --repo "$REPO" --json name --jq '.[].name' | grep -qx release; then
+            echo "::error::The 'release' label does not exist. Create it before running this workflow."
+            exit 1
+          fi
+          gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
+          gh pr list --repo "$REPO" --label release --state open --json url > "$OPEN_PRS_FILE"
+          gh api "repos/$REPO/git/matching-refs/heads/$BRANCH" > "$BRANCH_REFS_FILE"
+          node .github/scripts/release-state.mjs verify-prepare
+
+      - name: Push release branch
+        shell: bash
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          BRANCH: ${{ steps.bump.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git add package.json package-lock.json
+          git commit -m "バージョンを $VERSION に更新"
+          git push origin "$BRANCH"
+
+      - name: Create release pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.bump.outputs.tag }}
+          BRANCH: ${{ steps.bump.outputs.branch }}
+          PREVIOUS_TAG: ${{ steps.check.outputs.previous_tag }}
+          BODY_FILE: ${{ runner.temp }}/pr-body.md
+        run: |
+          set -euo pipefail
+          # release.yml の「Create or retarget draft」と同じ引数で生成し、プレビューと実際のノートをそろえる
+          NOTES_ARGS=(-f tag_name="$TAG" -f target_commitish="$BRANCH")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            NOTES_ARGS+=(-f previous_tag_name="$PREVIOUS_TAG")
+          fi
+          NOTES=$(gh api "repos/$REPO/releases/generate-notes" "${NOTES_ARGS[@]}" --jq .body)
+          {
+            echo "# 概要"
+            echo
+            echo "$TAG をリリースする"
+            echo
+            echo "## 詳細"
+            echo
+            echo "- \`package.json\` と \`package-lock.json\` のバージョンを $TAG に更新する"
+            echo "- マージすると Release workflow が Draft Release を作成し、ビルド成果物のアップロード後に公開する"
+            echo
+            echo "## リリースノートのプレビュー"
+            echo
+            echo "$NOTES"
+          } > "$BODY_FILE"
+          if ! gh pr create --repo "$REPO" --base main --head "$BRANCH" --label release \
+            --title "リリース $TAG" --body-file "$BODY_FILE"; then
+            echo "::error::Could not create the pull request. Check that 'Allow GitHub Actions to create and approve pull requests' is enabled in the repository settings. The branch $BRANCH has been pushed, so you can also open the pull request manually."
+            exit 1
+          fi

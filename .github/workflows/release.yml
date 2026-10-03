@@ -1,6 +1,18 @@
 name: Release
 
+# 起動経路は 3 つ。
+# - push: リリース PR のマージで package.json のバージョンが上がったとき。
+#   Draft Release を作り、全 OS の成果物をアップロードしてから公開する
+# - workflow_dispatch: 失敗した Draft を main の最新コミットで作り直す
+# - release: 手動で公開した Release に成果物をアップロードする（従来の経路）
+# ビルドジョブは書き込み権限を持たず、Release への書き込みは npm ci を実行しない
+# create-release / upload-release だけが行う。
+
 on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -8,8 +20,98 @@ permissions:
   contents: read
 
 jobs:
+  create-release:
+    name: Resolve Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Release への書き込み（Draft の作成・付け替え、アップロード・公開）を直列にする。
+    # upload-release と同じグループにして、確認から公開までの間に付け替えが入らないようにする。
+    concurrency:
+      group: release-write
+      cancel-in-progress: false
+    outputs:
+      build: ${{ steps.resolve.outputs.build }}
+      mode: ${{ steps.resolve.outputs.mode }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Resolve release
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          RELEASES_FILE: ${{ runner.temp }}/releases.json
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = release ]; then
+            {
+              echo "mode=event"
+              echo "tag=$EVENT_TAG"
+              echo "build=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          export VERSION
+          VERSION=$(node -p "require('./package.json').version")
+          export PREVIOUS_VERSION=''
+          if [ "$EVENT_NAME" = push ]; then
+            export MODE=push
+            PREVIOUS_VERSION=$(gh api "repos/$REPO/contents/package.json?ref=$BEFORE" --jq .content \
+              | base64 --decode | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+          else
+            if [ "$REF" != refs/heads/main ]; then
+              echo "::error::Run this workflow from the main branch."
+              exit 1
+            fi
+            export MODE=dispatch
+          fi
+
+          gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
+          node .github/scripts/release-state.mjs resolve
+          echo "mode=draft" >> "$GITHUB_OUTPUT"
+
+      - name: Create or retarget draft
+        if: steps.resolve.outputs.action == 'create' || steps.resolve.outputs.action == 'retarget'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTION: ${{ steps.resolve.outputs.action }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.resolve.outputs.previous_tag }}
+          SHA: ${{ github.sha }}
+          NOTES_FILE: ${{ runner.temp }}/notes.md
+        run: |
+          set -euo pipefail
+          # 比較元を明示してノートを生成する（Draft はタグを持たないため target で範囲を決める）。
+          # prepare-release.yml のプレビューと同じ引数で生成する。
+          NOTES_ARGS=(-f tag_name="$TAG" -f target_commitish="$SHA")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            NOTES_ARGS+=(-f previous_tag_name="$PREVIOUS_TAG")
+          fi
+          gh api "repos/$GH_REPO/releases/generate-notes" "${NOTES_ARGS[@]}" --jq .body > "$NOTES_FILE"
+
+          if [ "$ACTION" = create ]; then
+            gh release create "$TAG" --draft --target "$SHA" --title "$TAG" --notes-file "$NOTES_FILE"
+          else
+            gh release edit "$TAG" --target "$SHA" --notes-file "$NOTES_FILE"
+          fi
+
   check-version:
     name: Check Version Consistency
+    needs: create-release
+    if: needs.create-release.outputs.build == 'true'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
@@ -29,7 +131,7 @@ jobs:
       - name: Get release tag version
         id: tag-version
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ needs.create-release.outputs.tag }}
         run: |
           echo "Release tag: $RELEASE_TAG"
 
@@ -64,8 +166,8 @@ jobs:
     name: Build Windows
     needs: check-version
     runs-on: windows-latest
-    permissions:
-      contents: write
+    outputs:
+      exe_path: ${{ steps.exe.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -84,35 +186,30 @@ jobs:
       - name: Build Windows app
         run: npm run build:win
 
+      # exe のファイル名は electron-builder.base.yml の portable.artifactName に対応する。
+      # 以降のステップと upload-release はこの output だけを参照する。
+      - name: Resolve EXE path
+        id: exe
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.check-version.outputs.version }}
+        run: echo "path=dist/tell-${RELEASE_VERSION}-win.exe" >> "$GITHUB_OUTPUT"
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
         with:
           name: windows-build
-          path: |
-            dist/*.exe
+          path: ${{ steps.exe.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
           retention-days: 7
-
-      - name: Upload to release
-        run: |
-          $files = Get-ChildItem -Path dist -Filter *.exe
-          if ($files.Count -eq 0) {
-            Write-Error "No .exe artifact found in dist"
-            exit 1
-          }
-          foreach ($file in $files) {
-            gh release upload $env:RELEASE_TAG $file.FullName --clobber
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
 
   build-macos:
     name: Build macOS
     needs: check-version
     runs-on: macos-latest
-    permissions:
-      contents: write
+    outputs:
+      dmg_path: ${{ steps.dmg.outputs.path }}
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -155,7 +252,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       # DMG のファイル名は electron-builder.release.yml の dmg.artifactName に対応する。
-      # 以降のステップはこの output だけを参照し、パスの二重定義を避ける。
+      # 以降のステップと upload-release はこの output だけを参照し、パスの二重定義を避ける。
       - name: Resolve DMG path
         id: dmg
         env:
@@ -206,12 +303,95 @@ jobs:
         with:
           name: macos-build
           path: ${{ steps.dmg.outputs.path }}
+          if-no-files-found: error
           compression-level: 0
           retention-days: 7
 
-      - name: Upload to release
-        run: gh release upload "$RELEASE_TAG" "$DMG_PATH" --clobber
+  # 全 OS の成果物がそろってからアップロードし、Draft なら公開する。
+  # Mac App Store 向けのジョブ（#183）は Apple 側の配布なので needs に含めない。
+  upload-release:
+    name: Upload and Publish Release
+    needs: [create-release, check-version, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # create-release と同じグループ。手動の publish と自動の実行が重なった場合も直列にする
+    concurrency:
+      group: release-write
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # ビルドジョブごとに別のディレクトリへ展開し、片方のジョブの artifact が
+      # もう片方の成果物を上書きできないようにする。
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: windows-build
+          path: release-assets/windows
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: macos-build
+          path: release-assets/macos
+
+      # ファイル名は各ビルドジョブの output（唯一の定義元）から取り、展開先のディレクトリと組み合わせる。
+      - name: Resolve release assets
+        id: assets
+        shell: bash
+        env:
+          EXE_PATH: ${{ needs.build-windows.outputs.exe_path }}
+          DMG_PATH: ${{ needs.build-macos.outputs.dmg_path }}
+          ASSETS_FILE: ${{ runner.temp }}/assets.txt
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            "release-assets/windows/$(basename "$EXE_PATH")" \
+            "release-assets/macos/$(basename "$DMG_PATH")" > "$ASSETS_FILE"
+          while IFS= read -r asset; do
+            test -f "$asset" || { echo "::error::Missing release asset: $asset"; exit 1; }
+          done < "$ASSETS_FILE"
+          echo "file=$ASSETS_FILE" >> "$GITHUB_OUTPUT"
+
+      # 別の実行による付け替え・公開や、手での公開の後に古い成果物で上書きしないよう、
+      # アップロードの直前に Release の状態を確かめる。
+      - name: Verify release state
+        id: verify
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          DMG_PATH: ${{ steps.dmg.outputs.path }}
+          REPO: ${{ github.repository }}
+          MODE: ${{ needs.create-release.outputs.mode }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+          SHA: ${{ github.sha }}
+          RELEASES_FILE: ${{ runner.temp }}/releases.json
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
+          node .github/scripts/release-state.mjs verify-upload
+
+      - name: Upload to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+          ASSETS_FILE: ${{ steps.assets.outputs.file }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r asset; do
+            gh release upload "$TAG" "$asset" --clobber
+          done < "$ASSETS_FILE"
+
+      - name: Publish release
+        if: steps.verify.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+          LATEST: ${{ steps.verify.outputs.latest }}
+        run: gh release edit "$TAG" --draft=false --latest="$LATEST"

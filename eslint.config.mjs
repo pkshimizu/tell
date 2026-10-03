@@ -32,5 +32,12 @@ export default tseslint.config(
       '@typescript-eslint/explicit-function-return-type': 'off'
     }
   },
+  {
+    // TS ブロックと同様に JS でも外す（JavaScript には戻り値の型を書けない）
+    files: ['**/*.{js,mjs,cjs}'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
+  },
   eslintConfigPrettier
 )
