@@ -1,10 +1,7 @@
 // リリースワークフロー（prepare-release.yml / release.yml）の判定ロジック。
 // GitHub API の取得とリリースの作成・更新はワークフロー側の gh が行い、ここでは
-// 取得済みのデータから「何をすべきか」だけを決める。依存パッケージは使わない
-// （npm ci を実行しないジョブから呼ぶため）。
-
-import { appendFileSync, readFileSync } from 'node:fs'
-import { pathToFileURL } from 'node:url'
+// 取得済みのデータから「何をすべきか」だけを決める純粋関数を置く。依存パッケージは
+// 使わない（npm ci を実行しないジョブから呼ぶため）。CLI は release-cli.mjs。
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/
 
@@ -133,6 +130,8 @@ export function verifyUpload({ mode, tag, sha, releases }) {
 
   if (mode === 'event') {
     if (release.draft) throw new Error(`Release ${tag} is still a draft.`)
+    // electron-updater は v 形式のタグを前提にするため、旧形式のタグには成果物を上げない
+    if (!/^v\d/.test(tag)) throw new Error(`Release ${tag} does not use the v{version} tag format.`)
     return { publish: false, latest: false }
   }
 
@@ -187,57 +186,92 @@ export function branchExistsIn(refs, branch) {
   return refs.some((ref) => ref.ref === `refs/heads/${branch}`)
 }
 
-function readJson(path) {
-  return JSON.parse(readFileSync(path, 'utf8'))
+/**
+ * Release に載せる成果物のファイル名。electron-builder の artifactName と対応させる唯一の定義元。
+ * 更新情報ファイル（updateInfo）は、参照先の本体より後にアップロードする。
+ */
+export function releaseAssets(platform, version) {
+  if (!parseVersion(version)) throw new Error(`Invalid version: ${version}`)
+  if (platform === 'windows') {
+    const main = `tell-${version}-win-setup.exe`
+    return { main, binaries: [main, `${main}.blockmap`], updateInfo: 'latest.yml' }
+  }
+  if (platform === 'macos') {
+    const main = `tell-${version}-universal-mac.zip`
+    return {
+      main,
+      binaries: [`tell-${version}-universal-mac.dmg`, main, `${main}.blockmap`],
+      updateInfo: 'latest-mac.yml'
+    }
+  }
+  throw new Error(`Unknown platform: ${platform}`)
 }
 
-function writeOutputs(outputs) {
-  const lines = Object.entries(outputs).map(([key, value]) => `${key}=${value}`)
-  for (const line of lines) console.log(line)
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join('\n')}\n`)
+function unquote(value) {
+  const trimmed = value.trim()
+  const quoted = /^(['"])(.*)\1$/.exec(trimmed)
+  return quoted ? quoted[2] : trimmed
 }
 
-function main(command) {
-  const env = process.env
-  const releases = flattenPages(readJson(env.RELEASES_FILE))
+/**
+ * electron-builder が書き出す latest.yml / latest-mac.yml を読む。
+ * 依存を持たないため、この形式（トップレベルのキーと files の配列）に限って行単位で解釈する。
+ */
+export function parseUpdateInfo(text) {
+  const info = { files: [] }
+  let current = null
+  let inFiles = false
+  for (const line of text.split(/\r?\n/)) {
+    const entry = /^ {2}- (\w+): (.*)$/.exec(line)
+    const field = /^ {4}(\w+): (.*)$/.exec(line)
+    const top = /^(\w+):(?: (.*))?$/.exec(line)
+    if (inFiles && entry) {
+      current = { [entry[1]]: unquote(entry[2]) }
+      info.files.push(current)
+    } else if (inFiles && field && current) {
+      current[field[1]] = unquote(field[2])
+    } else if (top) {
+      inFiles = top[1] === 'files'
+      current = null
+      if (!inFiles && top[2] !== undefined) info[top[1]] = unquote(top[2])
+    }
+  }
+  return info
+}
 
-  if (command === 'resolve') {
-    const result = resolveRelease({
-      mode: env.MODE,
-      version: env.VERSION,
-      previousVersion: env.PREVIOUS_VERSION || null,
-      releases
-    })
-    console.log(result.reason)
-    writeOutputs({
-      action: result.action,
-      tag: result.tag,
-      build: result.action !== 'skip',
-      previous_tag: latestPublished(releases)?.tag ?? ''
-    })
-  } else if (command === 'verify-upload') {
-    const result = verifyUpload({ mode: env.MODE, tag: env.TAG, sha: env.SHA, releases })
-    writeOutputs({ publish: result.publish, latest: result.latest })
-  } else if (command === 'verify-prepare') {
-    verifyPrepare({
-      currentVersion: env.CURRENT_VERSION,
-      nextVersion: env.VERSION,
-      branch: env.BRANCH,
-      releases,
-      openReleasePrs: readJson(env.OPEN_PRS_FILE),
-      branchExists: branchExistsIn(readJson(env.BRANCH_REFS_FILE), env.BRANCH)
-    })
-    writeOutputs({ previous_tag: latestPublished(releases)?.tag ?? '' })
-  } else {
-    throw new Error(`Unknown command: ${command}`)
+/**
+ * 更新情報ファイルが、今回のバージョンと実際のファイル（sha512・サイズ）を指しているかを確かめる。
+ * actualFiles: ファイル名 → { sha512, size }（存在するファイルだけ）
+ */
+export function checkUpdateInfo(info, { version, main, actualFiles }) {
+  if (info.version !== version) {
+    throw new Error(`Update info version ${info.version} does not match ${version}.`)
+  }
+  if (info.path !== main) throw new Error(`Update info path ${info.path} is not ${main}.`)
+  if (!info.files.some((file) => file.url === main)) {
+    throw new Error(`Update info files do not include ${main}.`)
+  }
+  for (const file of info.files) {
+    const actual = actualFiles[file.url]
+    if (!actual) throw new Error(`Update info refers to a missing file: ${file.url}`)
+    if (file.sha512 !== actual.sha512 || Number(file.size) !== actual.size) {
+      throw new Error(`Update info does not match the contents of ${file.url}.`)
+    }
+  }
+  const mainFile = info.files.find((file) => file.url === main)
+  if (info.sha512 !== mainFile.sha512) {
+    throw new Error(`Update info sha512 does not match the entry for ${main}.`)
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  try {
-    main(process.argv[2])
-  } catch (error) {
-    console.log(`::error::${error.message}`)
-    process.exit(1)
-  }
+/**
+ * アップロード前に Release から削除するアセット。
+ * - 更新情報ファイルは常に削除し、本体を上げ終えてから最後に上げ直す（再実行で sha512 が
+ *   食い違う時間を作らないため）
+ * - draft モードでは、今回の一覧に無い古いアセット（前の実行やファイル名変更の名残）も消す
+ */
+export function assetsToDelete({ mode, existing, expected, updateInfo }) {
+  return existing.filter(
+    (name) => updateInfo.includes(name) || (mode !== 'event' && !expected.includes(name))
+  )
 }

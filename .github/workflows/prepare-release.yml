@@ -87,7 +87,7 @@ jobs:
           gh api --paginate --slurp "repos/$REPO/releases" > "$RELEASES_FILE"
           gh pr list --repo "$REPO" --label release --state open --json url > "$OPEN_PRS_FILE"
           gh api "repos/$REPO/git/matching-refs/heads/$BRANCH" > "$BRANCH_REFS_FILE"
-          node .github/scripts/release-state.mjs verify-prepare
+          node .github/scripts/release-cli.mjs verify-prepare
 
       - name: Push release branch
         shell: bash

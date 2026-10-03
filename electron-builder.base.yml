@@ -20,12 +20,13 @@ asarUnpack:
 win:
   icon: build/icon.ico
   executableName: tell
+  # electron-updater で自動更新できるよう、portable ではなくインストーラーで配布する
   target:
-    - target: portable
+    - target: nsis
       arch:
         - x64
-portable:
-  artifactName: ${name}-${version}-win.${ext}
+nsis:
+  artifactName: ${name}-${version}-win-setup.${ext}
 # mac.target は各派生設定で定義する。
 # extends のマージは配列を「結合」するため、ここに置くと子側で上書きできず
 # zip と dmg の両方が生成されてしまう。
@@ -38,5 +39,12 @@ mac:
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
 npmRebuild: false
+# 更新情報ファイル（latest.yml / latest-mac.yml）とアプリ内の app-update.yml を生成するための設定。
+# 実際のアップロードは CI の upload-release が行い、electron-builder 自身は publish しない（--publish never）。
+# 派生設定で配列が結合されないよう、配列ではなくマッピングで書く（mac.target と同じ理由）。
+publish:
+  provider: github
+  owner: pkshimizu
+  repo: tell
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
