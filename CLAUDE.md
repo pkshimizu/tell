@@ -148,15 +148,17 @@ When adding IPC handlers:
 
 ### Application Distribution
 
-- electron-builder configuration is split into three files:
-  - `electron-builder.base.yml` — settings shared by every build
-  - `electron-builder.yml` — default local build (unsigned, non-notarized Universal ZIP)
-  - `electron-builder.release.yml` — release build (signed and notarized Universal DMG), used by CI
+- electron-builder configuration is split into `electron-builder.base.yml` (shared),
+  `electron-builder.yml` (local build) and `electron-builder.release.yml` (CI release build); the
+  roles, artifacts and release flow are described in CONTRIBUTING.md ("Build configuration",
+  "Release Process")
 - App ID: `net.noncore.tell`
-- Distributed artifacts: Windows portable exe (`tell-{version}-win.exe`) and
-  macOS Universal DMG (`tell-{version}-universal-mac.dmg`)
-- `mac.target` is declared in each derived config, not in the base one: `extends`
-  concatenates arrays, so a base-level target would produce both a ZIP and a DMG
+- `mac.target` is declared in each derived config, not in the base one: `extends` concatenates
+  arrays, so a base-level target would produce both a ZIP and a DMG. `publish` is a mapping for the
+  same reason
+- Local builds set `publish: null` so they never receive in-app updates; do not remove it
+- Release asset names are defined once in `.github/scripts/release-state.mjs` (`releaseAssets`);
+  change them together with the `artifactName` settings (tests check that they match)
 
 ### Database (Drizzle ORM + SQLite)
 

@@ -40,9 +40,24 @@ tell is a desktop application that helps you stay on top of your GitHub activiti
 
 Get the latest binaries from the [GitHub Releases](https://github.com/pkshimizu/tell/releases) page.
 
-- **Windows**: Download `tell-{version}-win.exe` and run it.
+- **Windows**: Download `tell-{version}-win-setup.exe` and run the installer.
 - **macOS**: Download `tell-{version}-universal-mac.dmg` (Universal: Intel & Apple Silicon), open it,
   drag `tell.app` to the `Applications` folder shown in the DMG window, and launch tell from Applications.
+
+### Updates
+
+tell v0.2.0 or later installed from GitHub Releases updates itself. It checks for a new version shortly after launch,
+every 6 hours, and when you click **Check for updates** in **Settings → General**. A new version is
+downloaded in the background, and tell asks you to restart: choose **Restart now** to update
+immediately, or **Later** to install it the next time you quit tell.
+
+- **macOS**: Updates are applied only when tell runs from the `Applications` folder. If you launch it
+  directly from the DMG, move it to `Applications` first.
+- **Builds from source** (`npm run build:win` / `npm run build:mac`) do not receive updates.
+
+> **Upgrading from v0.1.0 or earlier**: these versions cannot update themselves. Install the latest
+> release once by hand: on Windows, install `tell-{version}-win-setup.exe` and delete the old portable
+> `tell-{version}-win.exe`; on macOS, replace `tell.app` in `Applications` with the one from the DMG.
 
 ### Build from Source
 
@@ -75,7 +90,7 @@ Get the latest binaries from the [GitHub Releases](https://github.com/pkshimizu/
    ```
 
 4. **Run the application**
-   - **Windows**: Run `dist/tell-{version}-win.exe`
+   - **Windows**: Run `dist/tell-{version}-win-setup.exe` to install it, or run `dist/win-unpacked/tell.exe` directly
    - **macOS**: Open `dist/mac-universal/tell.app`
 
 ## 🚀 Getting Started
