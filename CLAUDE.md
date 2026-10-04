@@ -149,14 +149,22 @@ When adding IPC handlers:
 ### Application Distribution
 
 - electron-builder configuration is split into three files:
-  - `electron-builder.base.yml` — settings shared by every build
-  - `electron-builder.yml` — default local build (unsigned, non-notarized Universal ZIP)
-  - `electron-builder.release.yml` — release build (signed and notarized Universal DMG), used by CI
+  - `electron-builder.base.yml` — settings shared by every build (incl. NSIS and the GitHub `publish` config)
+  - `electron-builder.yml` — default local build (unsigned, non-notarized Universal ZIP; `publish: null`,
+    so local builds never receive in-app updates)
+  - `electron-builder.release.yml` — release build used by CI (signed and notarized Universal DMG + ZIP
+    on macOS; also used for the Windows build to generate `latest.yml`)
 - App ID: `net.noncore.tell`
-- Distributed artifacts: Windows portable exe (`tell-{version}-win.exe`) and
-  macOS Universal DMG (`tell-{version}-universal-mac.dmg`)
+- Distributed artifacts: Windows NSIS installer (`tell-{version}-win-setup.exe`), macOS Universal DMG
+  (`tell-{version}-universal-mac.dmg`) and ZIP (`tell-{version}-universal-mac.zip`), plus the blockmaps
+  and `latest.yml` / `latest-mac.yml` used by the in-app updater (`electron-updater`)
+- Release asset names are defined once in `.github/scripts/release-state.mjs` (`releaseAssets`);
+  tests check that they match the `artifactName` settings
+- Releases are created by merging a release pull request opened by the `Prepare Release` workflow;
+  see CONTRIBUTING.md "Release Process"
 - `mac.target` is declared in each derived config, not in the base one: `extends`
-  concatenates arrays, so a base-level target would produce both a ZIP and a DMG
+  concatenates arrays, so a base-level target would produce both a ZIP and a DMG (`publish` is a
+  mapping for the same reason)
 
 ### Database (Drizzle ORM + SQLite)
 
