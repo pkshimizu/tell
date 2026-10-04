@@ -181,8 +181,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ローカル設定（electron-builder.yml）は publish: null で更新設定を埋め込まないため、
+      # リリースは更新情報ファイルと app-update.yml を生成する release 設定でビルドする。
       - name: Build Windows app
-        run: npm run build:win
+        run: npm run build:win -- --config electron-builder.release.yml
 
       # 成果物のファイル名は release-state.mjs の releaseAssets が唯一の定義元。
       # その一覧に従って集め、latest.yml が実際のファイルを指していることを確かめる。

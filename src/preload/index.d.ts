@@ -5,6 +5,7 @@ import type {
   GitHubApiPullRequest,
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
+import type { UpdateSnapshot } from '@main/models/update'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -116,6 +117,14 @@ interface AppAPI {
   getVersion: () => Promise<string>
 }
 
+interface UpdateAPI {
+  getStatus: () => Promise<{ success: boolean; data?: UpdateSnapshot; error?: string }>
+  check: () => Promise<{ success: boolean; data?: UpdateSnapshot; error?: string }>
+  install: () => Promise<{ success: boolean; data?: boolean; error?: string }>
+  dismiss: (version: string) => Promise<{ success: boolean; error?: string }>
+  onStatus: (callback: (snapshot: UpdateSnapshot) => void) => () => void
+}
+
 interface ThemeAPI {
   get: () => Promise<ThemeMode>
   set: (mode: ThemeMode) => Promise<{
@@ -143,6 +152,7 @@ interface API {
     pullRequests: SettingsPullRequestsAPI
   }
   app: AppAPI
+  update: UpdateAPI
   theme: ThemeAPI
   debug: {
     store: DebugStoreAPI
