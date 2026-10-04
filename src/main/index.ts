@@ -17,6 +17,7 @@ import { settingsService } from '@main/services/settings-service'
 import { initializeStore, getStore } from '@main/store'
 import { createOrShowDebugStoreWindow } from '@main/windows/debug-store'
 import { WindowStateService } from '@main/services/window-state-service'
+import { updateService } from '@main/services/update-service'
 
 let windowStateService: WindowStateService | null = null
 
@@ -397,6 +398,28 @@ app.whenReady().then(async () => {
     return app.getVersion()
   })
 
+  // Update IPC handlers
+  ipcMain.handle('update:getStatus', () => {
+    return { success: true, data: updateService.getSnapshot() }
+  })
+  ipcMain.handle('update:check', async () => {
+    try {
+      return { success: true, data: await updateService.check() }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  })
+  ipcMain.handle('update:install', () => {
+    return { success: true, data: updateService.install() }
+  })
+  ipcMain.handle('update:dismiss', (_, version: string) => {
+    updateService.dismiss(version)
+    return { success: true }
+  })
+
   // Theme IPC handlers
   ipcMain.handle('theme:get', async () => {
     try {
@@ -493,6 +516,7 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+  updateService.init()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

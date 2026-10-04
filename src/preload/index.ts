@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { UpdateSnapshot } from '@main/services/update-state'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -59,6 +60,20 @@ const api = {
   },
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion')
+  },
+  update: {
+    getStatus: () => ipcRenderer.invoke('update:getStatus'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    dismiss: (version: string) => ipcRenderer.invoke('update:dismiss', version),
+    // 解除関数は ipcRenderer.on に渡したラッパーを外す（callback を渡しても外れない）
+    onStatus: (callback: (snapshot: UpdateSnapshot) => void) => {
+      const listener = (_: IpcRendererEvent, snapshot: UpdateSnapshot): void => callback(snapshot)
+      ipcRenderer.on('update:status', listener)
+      return () => {
+        ipcRenderer.removeListener('update:status', listener)
+      }
+    }
   },
   theme: {
     get: () => ipcRenderer.invoke('theme:get'),

@@ -3,6 +3,7 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import SideBar from '@renderer/features/system/side-bar'
 import { TColumn } from '@renderer/components/layout/flex-box'
 import SystemMessage from '@renderer/features/system/message'
+import UpdateDialog from '@renderer/features/system/update-dialog'
 
 export const Route = createRootRoute({
   component: () => (
@@ -12,6 +13,7 @@ export const Route = createRootRoute({
         <Outlet />
       </TColumn>
       <SystemMessage />
+      <UpdateDialog />
       {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
     </>
   )

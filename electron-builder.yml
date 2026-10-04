@@ -9,3 +9,6 @@ mac:
   notarize: false
   # null は「署名しない」の意味（リリース設定の空文字とは意味が異なる）。
   identity: null
+# ローカルビルドには更新設定（app-update.yml）を埋め込まない。未署名のローカルビルドが
+# アプリ内アップデートで Release 版を取りに行かないようにするため（CI は release 設定を使う）。
+publish: null
