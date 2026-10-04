@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { reduceUpdate, shouldCheck, shouldPromptRestart, type UpdateStatus } from './update-state'
+import {
+  reduceUpdate,
+  resolveUnsupportedReason,
+  shouldCheck,
+  shouldPromptRestart,
+  watchdogTimeout,
+  type UpdateStatus
+} from './update-state'
 
 const downloading: UpdateStatus = { state: 'downloading', version: '0.2.0', percent: 40 }
 const ready: UpdateStatus = { state: 'ready', version: '0.2.0' }
@@ -56,6 +63,23 @@ describe('reduceUpdate', () => {
     )
   })
 
+  it('restarts the download for another version announced while downloading', () => {
+    expect(reduceUpdate(downloading, { type: 'update-available', version: '0.2.1' })).toEqual({
+      state: 'downloading',
+      version: '0.2.1',
+      percent: 0
+    })
+  })
+
+  it('reports a quiet error outside of a running check', () => {
+    for (const status of [{ state: 'idle' }, { state: 'up-to-date' }] as const) {
+      expect(reduceUpdate(status, { type: 'error', message: 'offline', quiet: true })).toEqual({
+        state: 'error',
+        message: 'offline'
+      })
+    }
+  })
+
   it('ignores progress outside of downloading and clamps it to 0-100', () => {
     expect(reduceUpdate({ state: 'checking' }, { type: 'download-progress', percent: 10 })).toEqual(
       { state: 'checking' }
@@ -66,6 +90,12 @@ describe('reduceUpdate', () => {
     expect(reduceUpdate(downloading, { type: 'download-progress', percent: NaN })).toMatchObject({
       percent: 0
     })
+    expect(reduceUpdate(downloading, { type: 'download-progress', percent: -5 })).toMatchObject({
+      percent: 0
+    })
+    expect(
+      reduceUpdate(downloading, { type: 'download-progress', percent: Infinity })
+    ).toMatchObject({ percent: 100 })
   })
 
   it('ignores update-not-available unless a check is running', () => {
@@ -82,6 +112,10 @@ describe('reduceUpdate', () => {
     ] as const) {
       expect(reduceUpdate(ready, event)).toBe(ready)
     }
+  })
+
+  it('keeps a downloaded update when the same version is downloaded again', () => {
+    expect(reduceUpdate(ready, { type: 'update-downloaded', version: '0.2.0' })).toBe(ready)
   })
 
   it('replaces a downloaded update with a newer downloaded one', () => {
@@ -131,5 +165,63 @@ describe('shouldPromptRestart', () => {
   it('does not prompt unless an update is ready', () => {
     expect(shouldPromptRestart(downloading, null)).toBe(false)
     expect(shouldPromptRestart({ state: 'idle' }, null)).toBe(false)
+  })
+})
+
+describe('watchdogTimeout', () => {
+  it('watches checking and downloading only', () => {
+    expect(watchdogTimeout({ state: 'checking' })).toBe(2 * 60 * 1000)
+    expect(watchdogTimeout(downloading)).toBe(10 * 60 * 1000)
+    for (const status of [
+      { state: 'idle' },
+      { state: 'up-to-date' },
+      ready,
+      { state: 'error', message: 'offline' },
+      { state: 'unsupported', reason: 'mas' }
+    ] as UpdateStatus[]) {
+      expect(watchdogTimeout(status)).toBeNull()
+    }
+  })
+})
+
+describe('resolveUnsupportedReason', () => {
+  const supported = {
+    isDev: false,
+    isMas: false,
+    hasUpdateConfig: true,
+    platform: 'darwin',
+    inApplicationsFolder: true
+  }
+
+  it('returns null when updates can be applied', () => {
+    expect(resolveUnsupportedReason(supported)).toBeNull()
+    expect(
+      resolveUnsupportedReason({ ...supported, platform: 'win32', inApplicationsFolder: false })
+    ).toBeNull()
+  })
+
+  it('reports each reason in priority order', () => {
+    expect(
+      resolveUnsupportedReason({
+        isDev: true,
+        isMas: true,
+        hasUpdateConfig: false,
+        platform: 'darwin',
+        inApplicationsFolder: false
+      })
+    ).toBe('development')
+    expect(resolveUnsupportedReason({ ...supported, isMas: true, hasUpdateConfig: false })).toBe(
+      'mas'
+    )
+    expect(
+      resolveUnsupportedReason({
+        ...supported,
+        hasUpdateConfig: false,
+        inApplicationsFolder: false
+      })
+    ).toBe('local-build')
+    expect(resolveUnsupportedReason({ ...supported, inApplicationsFolder: false })).toBe(
+      'not-in-applications'
+    )
   })
 })

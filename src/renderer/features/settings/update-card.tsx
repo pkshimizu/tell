@@ -6,24 +6,22 @@ import TLinearProgress from '@renderer/components/feedback/linear-progress'
 import TLink from '@renderer/components/navigation/link'
 import useUpdate from '@renderer/hooks/update'
 import useMessage from '@renderer/hooks/message'
-import type { UpdateStatus } from '@main/services/update-state'
+import type { UnsupportedReason, UpdateStatus } from '@main/models/update'
 
 const RELEASES_URL = 'https://github.com/pkshimizu/tell/releases'
+
+const UNSUPPORTED_REASON_TEXT: Record<UnsupportedReason, string> = {
+  development: 'Updates are disabled in development mode.',
+  mas: 'Updates are delivered through the Mac App Store.',
+  'local-build':
+    'This build does not receive updates. Install tell from GitHub Releases to get updates.',
+  'not-in-applications': 'Move tell to the Applications folder to receive updates.'
+}
 
 function statusText(status: UpdateStatus): string {
   switch (status.state) {
     case 'unsupported':
-      switch (status.reason) {
-        case 'development':
-          return 'Updates are disabled in development mode.'
-        case 'mas':
-          return 'Updates are delivered through the Mac App Store.'
-        case 'local-build':
-          return 'This build does not receive updates. Install tell from GitHub Releases to get updates.'
-        case 'not-in-applications':
-          return 'Move tell to the Applications folder to receive updates.'
-      }
-      break
+      return UNSUPPORTED_REASON_TEXT[status.reason]
     case 'idle':
       return 'Updates are checked automatically.'
     case 'checking':
@@ -62,12 +60,17 @@ export function UpdateCard(): JSX.Element {
     setChecking(true)
     try {
       const result = await check()
-      if (result?.status.state === 'up-to-date') {
+      if (!result.success || !result.data) {
+        setMessage('error', result.error || 'Could not check for updates')
+        return
+      }
+      const checked = result.data.status
+      if (checked.state === 'up-to-date') {
         setMessage('success', 'tell is up to date.')
-      } else if (result?.status.state === 'error') {
-        setMessage('error', `Could not check for updates: ${result.status.message}`)
-      } else if (result?.status.state === 'downloading') {
-        setMessage('info', `Downloading v${result.status.version}...`)
+      } else if (checked.state === 'error') {
+        setMessage('error', `Could not check for updates: ${checked.message}`)
+      } else if (checked.state === 'downloading') {
+        setMessage('info', `Downloading v${checked.version}...`)
       }
     } finally {
       setChecking(false)

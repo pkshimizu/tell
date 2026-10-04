@@ -7,13 +7,13 @@ import HomeIcon from '@renderer/components/display/icons/home'
 import SettingsIcon from '@renderer/components/display/icons/settings'
 import BugIcon from '@renderer/components/display/icons/bug'
 import TButton from '@renderer/components/form/button'
-import useUpdate from '@renderer/hooks/update'
+import { useUpdateReady } from '@renderer/hooks/update'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 
 export default function SideBar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { snapshot } = useUpdate()
+  const updateReady = useUpdateReady()
   const [version, setVersion] = useState<string>('')
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function SideBar() {
       <TColumn height="100%" justify="space-between">
         <TList items={menuItems} />
         <TColumn pa={2} align="center" gap={1}>
-          {snapshot?.status.state === 'ready' && (
+          {updateReady && (
             <TButton
               variant="text"
               color="primary"

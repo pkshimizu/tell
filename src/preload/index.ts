@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { UpdateSnapshot } from '@main/services/update-state'
+import type { UpdateSnapshot } from '@main/models/update'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer

@@ -400,7 +400,14 @@ app.whenReady().then(async () => {
 
   // Update IPC handlers
   ipcMain.handle('update:getStatus', () => {
-    return { success: true, data: updateService.getSnapshot() }
+    try {
+      return { success: true, data: updateService.getSnapshot() }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
   })
   ipcMain.handle('update:check', async () => {
     try {
@@ -413,11 +420,25 @@ app.whenReady().then(async () => {
     }
   })
   ipcMain.handle('update:install', () => {
-    return { success: true, data: updateService.install() }
+    try {
+      return { success: true, data: updateService.install() }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
   })
   ipcMain.handle('update:dismiss', (_, version: string) => {
-    updateService.dismiss(version)
-    return { success: true }
+    try {
+      updateService.dismiss(version)
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
   })
 
   // Theme IPC handlers

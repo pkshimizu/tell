@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { create } from 'zustand/react'
-import type { UpdateSnapshot } from '@main/services/update-state'
+import type { UpdateSnapshot } from '@main/models/update'
 
 type UpdateStore = {
   snapshot: UpdateSnapshot | null
@@ -15,7 +15,7 @@ const useUpdateStore = create<UpdateStore>((set) => ({
 }))
 
 /**
- * メインプロセスの更新状態を購読する。ルートで 1 回だけ呼ぶ。
+ * メインプロセスの更新状態を購読する。ルートコンポーネントで 1 回だけ呼ぶ。
  * 先に購読してから現在の状態を取得する（取得の間に届いた変化を取りこぼさないため）。
  */
 export function useUpdateSubscription() {
@@ -30,18 +30,22 @@ export function useUpdateSubscription() {
   }, [setSnapshot])
 }
 
+/** 再起動すれば更新できる状態か。ダウンロードの進捗では再描画しない。 */
+export function useUpdateReady() {
+  return useUpdateStore((store) => store.snapshot?.status.state === 'ready')
+}
+
 export default function useUpdate() {
   const snapshot = useUpdateStore((store) => store.snapshot)
   const setSnapshot = useUpdateStore((store) => store.setSnapshot)
 
   return {
     snapshot,
-    /** 手動で確認し、確認が終わった時点の状態を返す。 */
-    check: async (): Promise<UpdateSnapshot | null> => {
+    /** 手動で確認する。確認が終わった時点の状態で store を更新し、IPC の結果を返す。 */
+    check: async () => {
       const result = await window.api.update.check()
-      if (!result.success || !result.data) return null
-      setSnapshot(result.data)
-      return result.data
+      if (result.success && result.data) setSnapshot(result.data)
+      return result
     },
     install: () => window.api.update.install(),
     dismiss: (version: string) => window.api.update.dismiss(version)

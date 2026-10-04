@@ -4,23 +4,21 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
 import { autoUpdater } from 'electron-updater'
+import type { UpdateSnapshot, UpdateStatus } from '@main/models/update'
 import {
   reduceUpdate,
+  resolveUnsupportedReason,
   shouldCheck,
   shouldPromptRestart,
-  type UnsupportedReason,
-  type UpdateEvent,
-  type UpdateSnapshot,
-  type UpdateStatus
+  watchdogTimeout,
+  type UpdateEvent
 } from '@main/services/update-state'
 
 const INITIAL_CHECK_DELAY_MS = 10 * 1000
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
-// electron-updater の通信は、スリープ明けなどで応答が返らないまま止まることがある。
-// 確認中・ダウンロード中のまま固まらないよう、一定時間で失敗扱いにする
-const CHECK_TIMEOUT_MS = 2 * 60 * 1000
-const DOWNLOAD_STALL_TIMEOUT_MS = 10 * 60 * 1000
 const TIMEOUT_MESSAGE = 'The update did not respond. Restart tell and try again.'
+
+type CheckSource = 'auto' | 'manual'
 
 const updateLogger = log.scope('updater')
 
@@ -36,13 +34,19 @@ class UpdateService {
   private dismissedVersion: string | null = null
   // macOS で electron-updater のダウンロードが終わり、Squirrel.Mac の取り込みを待っている版
   private stagingVersion: string | null = null
-  private checkSource: 'auto' | 'manual' = 'auto'
+  private checkSource: CheckSource = 'auto'
   private installing = false
   private timers: NodeJS.Timeout[] = []
   private watchdog: NodeJS.Timeout | null = null
 
   init(): void {
-    const reason = this.unsupportedReason()
+    const reason = resolveUnsupportedReason({
+      isDev: is.dev,
+      isMas: Boolean(process.mas),
+      hasUpdateConfig: existsSync(join(process.resourcesPath, 'app-update.yml')),
+      platform: process.platform,
+      inApplicationsFolder: process.platform === 'darwin' && app.isInApplicationsFolder()
+    })
     if (reason) {
       this.status = { state: 'unsupported', reason }
       updateLogger.info(`Updates are disabled: ${reason}`)
@@ -79,9 +83,14 @@ class UpdateService {
         }
       })
     }
-    autoUpdater.on('error', (error) =>
-      this.dispatch({ type: 'error', message: error.message, quiet: this.checkSource === 'auto' })
-    )
+    autoUpdater.on('error', (error) => {
+      if (this.installing) {
+        // インストールに失敗した場合は、もう一度「再起動して更新」を押せるように戻す
+        this.installing = false
+        updateLogger.error('Failed to install the update', error)
+      }
+      this.dispatchError(error.message)
+    })
 
     this.timers.push(
       setTimeout(() => void this.runCheck('auto'), INITIAL_CHECK_DELAY_MS),
@@ -119,16 +128,37 @@ class UpdateService {
     this.broadcast()
   }
 
-  private async runCheck(source: 'auto' | 'manual'): Promise<void> {
+  private async runCheck(source: CheckSource): Promise<void> {
     if (!shouldCheck(this.status)) return
     this.checkSource = source
+    const pending = autoUpdater.checkForUpdates()
+    // 確認が始まれば checking-for-update が同期的に発火して checking になる。ならなければ、
+    // 前回の確認が応答しないまま残っている（electron-updater は同じ Promise を返し、
+    // イベントを出さない）ので、待たずに戻る
+    if (this.status.state !== 'checking') {
+      pending?.catch(() => undefined)
+      updateLogger.warn('The previous update check has not finished')
+      if (source === 'manual') this.dispatch({ type: 'error', message: TIMEOUT_MESSAGE })
+      return
+    }
     try {
-      const result = await autoUpdater.checkForUpdates()
+      // 手動確認の IPC が返らなくならないよう、確認の監視時間を待ちの上限にする
+      const result = await Promise.race([
+        pending,
+        new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), watchdogTimeout({ state: 'checking' }) ?? 0)
+        )
+      ])
       // ダウンロードの失敗は error イベントで状態に反映する。ここでは拒否を受け止めるだけ
       result?.downloadPromise?.catch(() => undefined)
     } catch (error) {
       updateLogger.warn('Update check failed', error)
     }
+  }
+
+  /** 自動確認の確認段階のエラーは表示に残さない（reduceUpdate の quiet）。 */
+  private dispatchError(message: string): void {
+    this.dispatch({ type: 'error', message, quiet: this.checkSource === 'auto' })
   }
 
   private dispatch(event: UpdateEvent): void {
@@ -142,22 +172,9 @@ class UpdateService {
   private resetWatchdog(): void {
     if (this.watchdog) clearTimeout(this.watchdog)
     this.watchdog = null
-    const timeout =
-      this.status.state === 'checking'
-        ? CHECK_TIMEOUT_MS
-        : this.status.state === 'downloading'
-          ? DOWNLOAD_STALL_TIMEOUT_MS
-          : null
+    const timeout = watchdogTimeout(this.status)
     if (timeout !== null) {
-      this.watchdog = setTimeout(
-        () =>
-          this.dispatch({
-            type: 'error',
-            message: TIMEOUT_MESSAGE,
-            quiet: this.checkSource === 'auto'
-          }),
-        timeout
-      )
+      this.watchdog = setTimeout(() => this.dispatchError(TIMEOUT_MESSAGE), timeout)
     }
   }
 
@@ -171,18 +188,6 @@ class UpdateService {
         updateLogger.warn('Failed to send the update status', error)
       }
     }
-  }
-
-  private unsupportedReason(): UnsupportedReason | null {
-    if (is.dev) return 'development'
-    if (process.mas) return 'mas'
-    // ローカルビルドは electron-builder.yml の publish: null で app-update.yml を持たない
-    if (!existsSync(join(process.resourcesPath, 'app-update.yml'))) return 'local-build'
-    // /Applications 以外（DMG 上や App Translocation）では Squirrel.Mac が更新を適用できない
-    if (process.platform === 'darwin' && !app.isInApplicationsFolder()) {
-      return 'not-in-applications'
-    }
-    return null
   }
 
   private dispose(): void {

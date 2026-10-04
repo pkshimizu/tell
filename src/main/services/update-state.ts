@@ -1,17 +1,11 @@
 // アプリ内アップデートの状態と遷移。electron / electron-updater に依存しない純粋関数として置き、
 // update-service.ts が electron-updater のイベントをここに通して状態を決める。
-// vitest から読み込むため、パスエイリアス（@main など）を使わない。
+// vitest にはパスエイリアスの設定が無いため、値の import を足すときは相対パスにする
+// （型だけの import はビルド時に消えるのでエイリアスでよい）。
 
-export type UnsupportedReason = 'development' | 'mas' | 'local-build' | 'not-in-applications'
+import type { UnsupportedReason, UpdateStatus } from '@main/models/update'
 
-export type UpdateStatus =
-  | { state: 'unsupported'; reason: UnsupportedReason }
-  | { state: 'idle' }
-  | { state: 'checking' }
-  | { state: 'up-to-date' }
-  | { state: 'downloading'; version: string; percent: number }
-  | { state: 'ready'; version: string }
-  | { state: 'error'; message: string }
+export type { UnsupportedReason, UpdateSnapshot, UpdateStatus } from '@main/models/update'
 
 export type UpdateEvent =
   | { type: 'check-started' }
@@ -24,19 +18,9 @@ export type UpdateEvent =
   | { type: 'error'; message: string; quiet?: boolean }
 
 /**
- * レンダラーに送る更新の状態。
- * canCheck は手動の確認を受け付けるか、promptRestart は「今すぐ再起動 / 後で」を出すかどうか。
- */
-export interface UpdateSnapshot {
-  status: UpdateStatus
-  canCheck: boolean
-  promptRestart: boolean
-}
-
-/**
  * electron-updater のイベントから次の状態を決める。
  * - unsupported は以後どのイベントでも変わらない
- * - ready（再起動すれば更新できる）は、より新しい版の準備完了でだけ置き換わる。
+ * - ready（再起動すれば更新できる）は、別の版の準備完了でだけ置き換わる。
  *   ready の間は確認しない（shouldCheck）ので、保留中にさらに新しい版が出ても次の起動まで検出しない
  */
 export function reduceUpdate(status: UpdateStatus, event: UpdateEvent): UpdateStatus {
@@ -57,7 +41,9 @@ export function reduceUpdate(status: UpdateStatus, event: UpdateEvent): UpdateSt
         ? { ...status, percent: clampPercent(event.percent) }
         : status
     case 'update-downloaded':
-      return { state: 'ready', version: event.version }
+      return status.state === 'ready' && status.version === event.version
+        ? status
+        : { state: 'ready', version: event.version }
     case 'error':
       if (event.quiet && status.state === 'checking') return { state: 'idle' }
       return { state: 'error', message: event.message }
@@ -65,7 +51,7 @@ export function reduceUpdate(status: UpdateStatus, event: UpdateEvent): UpdateSt
 }
 
 function clampPercent(percent: number): number {
-  if (!Number.isFinite(percent)) return 0
+  if (Number.isNaN(percent)) return 0
   return Math.min(100, Math.max(0, percent))
 }
 
@@ -80,4 +66,35 @@ export function shouldPromptRestart(
   dismissedVersion: string | null
 ): boolean {
   return status.state === 'ready' && status.version !== dismissedVersion
+}
+
+// electron-updater の通信は、スリープ明けなどで応答が返らないまま止まることがある。
+// 確認中・ダウンロード中のまま固まらないよう、一定時間で失敗扱いにする
+const CHECK_TIMEOUT_MS = 2 * 60 * 1000
+const DOWNLOAD_STALL_TIMEOUT_MS = 10 * 60 * 1000
+
+/** 状態ごとの監視時間。確認中とダウンロード中（進捗が止まった時間）だけを見る。 */
+export function watchdogTimeout(status: UpdateStatus): number | null {
+  if (status.state === 'checking') return CHECK_TIMEOUT_MS
+  if (status.state === 'downloading') return DOWNLOAD_STALL_TIMEOUT_MS
+  return null
+}
+
+/** アップデートを確認しない理由を、優先度の高い順に判定する。確認してよければ null。 */
+export function resolveUnsupportedReason(environment: {
+  isDev: boolean
+  isMas: boolean
+  hasUpdateConfig: boolean
+  platform: string
+  inApplicationsFolder: boolean
+}): UnsupportedReason | null {
+  if (environment.isDev) return 'development'
+  if (environment.isMas) return 'mas'
+  // ローカルビルドは electron-builder.yml の publish: null で app-update.yml を持たない
+  if (!environment.hasUpdateConfig) return 'local-build'
+  // /Applications 以外（DMG 上や App Translocation）では Squirrel.Mac が更新を適用できない
+  if (environment.platform === 'darwin' && !environment.inApplicationsFolder) {
+    return 'not-in-applications'
+  }
+  return null
 }

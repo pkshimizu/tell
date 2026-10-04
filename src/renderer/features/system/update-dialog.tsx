@@ -2,14 +2,12 @@ import TDialog from '@renderer/components/feedback/dialog'
 import TText from '@renderer/components/display/text'
 import TButton from '@renderer/components/form/button'
 import { TRow } from '@renderer/components/layout/flex-box'
-import useUpdate, { useUpdateSubscription } from '@renderer/hooks/update'
+import useUpdate from '@renderer/hooks/update'
 
 /**
  * 更新の準備ができたら「今すぐ再起動 / 後で」を尋ねるダイアログ。
- * 更新状態の購読もここで行う（ルートに 1 つだけ置く）。
  */
 export default function UpdateDialog() {
-  useUpdateSubscription()
   const { snapshot, install, dismiss } = useUpdate()
 
   const status = snapshot?.status

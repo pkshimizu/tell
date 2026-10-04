@@ -5,7 +5,7 @@ import type {
   GitHubApiPullRequest,
   GitHubApiRepository as GitHubApiRepositoryModel
 } from '@main/models/github'
-import type { UpdateSnapshot } from '@main/services/update-state'
+import type { UpdateSnapshot } from '@main/models/update'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
