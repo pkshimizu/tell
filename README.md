@@ -46,7 +46,7 @@ Get the latest binaries from the [GitHub Releases](https://github.com/pkshimizu/
 
 ### Updates
 
-tell installed from GitHub Releases updates itself. It checks for a new version shortly after launch,
+tell v0.2.0 or later installed from GitHub Releases updates itself. It checks for a new version shortly after launch,
 every 6 hours, and when you click **Check for updates** in **Settings → General**. A new version is
 downloaded in the background, and tell asks you to restart: choose **Restart now** to update
 immediately, or **Later** to install it the next time you quit tell.
@@ -55,9 +55,9 @@ immediately, or **Later** to install it the next time you quit tell.
   directly from the DMG, move it to `Applications` first.
 - **Builds from source** (`npm run build:win` / `npm run build:mac`) do not receive updates.
 
-> **Upgrading from v0.1.0 or earlier on Windows**: these versions were distributed as a portable
-> `tell-{version}-win.exe`, which cannot update itself. Install `tell-{version}-win-setup.exe` once,
-> then delete the old portable exe.
+> **Upgrading from v0.1.0 or earlier**: these versions cannot update themselves. Install the latest
+> release once by hand: on Windows, install `tell-{version}-win-setup.exe` and delete the old portable
+> `tell-{version}-win.exe`; on macOS, replace `tell.app` in `Applications` with the one from the DMG.
 
 ### Build from Source
 

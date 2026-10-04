@@ -87,11 +87,11 @@ $ npm run build:unpack
 
 electron-builder settings are split into three files:
 
-| File                           | Purpose                                                                                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `electron-builder.base.yml`    | Settings shared by every build (app ID, files, icons, `extendInfo`, Windows NSIS installer, GitHub `publish` used for the update files)     |
-| `electron-builder.yml`         | Default local build: unsigned, non-notarized Universal ZIP; `publish: null`, so no update configuration is embedded                         |
-| `electron-builder.release.yml` | Release build (CI only): Developer ID signed and Apple notarized Universal DMG and ZIP; also used for the Windows build to get `latest.yml` |
+| File                           | Purpose                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `electron-builder.base.yml`    | Shared settings (app ID, files, icons, NSIS installer, GitHub `publish`)       |
+| `electron-builder.yml`         | Local build: unsigned Universal ZIP, `publish: null` (no update configuration) |
+| `electron-builder.release.yml` | CI release build: signed and notarized DMG and ZIP; also used for Windows      |
 
 The latter two `extends` the base file. `mac.target` is intentionally declared in each
 derived file instead of the base one, because `extends` concatenates arrays — putting it
@@ -168,24 +168,26 @@ $ npm run db:studio
 Releases are created from a **release pull request**. Merging it is the approval of the release;
 the tag, the GitHub Release and the uploads are created automatically.
 
-### One-time setup
+### One-Time Setup
 
 - **Settings → Actions → General → Workflow permissions**: enable
   **Allow GitHub Actions to create and approve pull requests** (Prepare Release creates the pull
-  request with `GITHUB_TOKEN`).
+  request with `GITHUB_TOKEN`). This also lets workflows _approve_ pull requests, so keep the default
+  workflow permissions read-only and grant `pull-requests: write` only to Prepare Release.
 - The `release` label must exist (it excludes release pull requests from the release notes).
 - macOS signing secrets: `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
   `APPLE_TEAM_ID`.
 
-### Release steps
+### Release Steps
 
 1. **Prepare the release pull request**: **Actions → Prepare Release → Run workflow** on `main`,
    choosing `patch`, `minor` or `major`. The workflow bumps `package.json` / `package-lock.json`
    on a `release/v{version}` branch and opens a pull request labeled `release`, with a preview of
    the release notes. It refuses to run while the current version is not published yet, while
    another release pull request is open, or when the next version already has a release.
-2. **Merge the release pull request.** `main` requires pull requests, and the last push is made by
-   the bot, so approve the pull request yourself or merge with the administrator bypass.
+2. **Merge the release pull request.** `main` requires pull requests and the last push is made by
+   the bot, so approve the pull request yourself and merge it. Use the administrator bypass only when
+   you cannot approve it.
 3. **Wait for the Release workflow.** On the merge it creates a **draft** release `v{version}`,
    builds Windows and macOS, verifies the artifacts (signature, notarization, update files),
    uploads them and then publishes the release. The release is marked as Latest only when it is
@@ -193,43 +195,50 @@ the tag, the GitHub Release and the uploads are created automatically.
 
 Notes:
 
-- Pull requests created with `GITHUB_TOKEN` do not trigger `pull_request` workflows.
+- Pull requests created with `GITHUB_TOKEN` do not trigger `pull_request` workflows, so no checks run
+  on the release pull request. It only changes the version, so merge it without waiting for checks.
 - **Do not publish or edit the draft in the GitHub UI while the workflow is running.** The upload
   job refuses to touch a draft that was published or retargeted in the meantime.
 - **Avoid publishing a release manually.** Publishing moves Latest immediately, and in-app updates
-  fail until the build has uploaded the artifacts and update files (30 minutes or more). The
-  `release: published` path is kept only for compatibility.
+  fail until the Release workflow has uploaded the artifacts and update files. If you do publish
+  manually, the Release workflow still builds and uploads the artifacts.
 - **If the build fails**, fix it on `main` and run **Actions → Release → Run workflow** on `main`
   (`workflow_dispatch`). It moves the existing draft to the latest commit and rebuilds it.
-- **To discard a failed draft**, delete it with `gh release delete v{version} --yes`. A draft has no
-  git tag until it is published, so there is no tag to clean up.
+- **To discard a failed draft**, delete it with `gh release delete v{version} --yes` (a draft has no
+  git tag until it is published, so there is no tag to clean up). `main` still has the bumped version,
+  so merge a pull request that reverts `package.json` / `package-lock.json` to the previous version
+  before running Prepare Release again. To retry the same version, rebuild it instead (see above).
 - A `package.json` change that does not bump the version (e.g. a dependency update) does not start a
   release.
 
-### Release artifacts
+### Release Artifacts
 
-| Platform | Files                                                                                                                                 |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows  | `tell-{version}-win-setup.exe` (NSIS installer, x64), `tell-{version}-win-setup.exe.blockmap`, `latest.yml`                           |
-| macOS    | `tell-{version}-universal-mac.dmg`, `tell-{version}-universal-mac.zip`, `tell-{version}-universal-mac.zip.blockmap`, `latest-mac.yml` |
+| Platform | Files                                                                           |
+| -------- | ------------------------------------------------------------------------------- |
+| Windows  | `tell-{version}-win-setup.exe` (x64), `*.exe.blockmap`, `latest.yml`            |
+| macOS    | `tell-{version}-universal-mac.dmg`, `*.zip`, `*.zip.blockmap`, `latest-mac.yml` |
 
-The DMG is for manual installation. The ZIP, the blockmaps and `latest*.yml` are used by the in-app
-updater (`electron-updater`); the update files are uploaded after the binaries they refer to.
+The Windows installer, the macOS ZIP, the blockmaps and `latest*.yml` are used by the in-app updater
+(`electron-updater`); the update files are uploaded after the binaries they refer to. The DMG is for
+manual installation only.
 
-The Windows installer is not code-signed, so `electron-updater` relies only on the sha512 in
-`latest.yml` (see #76).
+Until the Windows installer is code-signed
+([#76](https://github.com/pkshimizu/tell/issues/76)), `electron-updater` checks it only against the
+sha512 in `latest.yml`. That file is in the same release, so the sha512 detects corruption but not
+tampering: write access to releases is effectively the ability to ship code to every Windows user.
+Keep repository write access and tokens tightly controlled.
 
-### Release notes
+### Release Notes
 
-Release notes are generated from merged pull requests and grouped by label (see
-`.github/release.yml`): `enhancement` → 新機能, `bug` → 不具合修正, `documentation` → ドキュメント,
-others → その他. Pull requests labeled `release` are excluded.
+Release notes are generated from merged pull requests and grouped by label as configured in
+`.github/release.yml`. Pull requests labeled `release` are excluded.
 
 ### Version Management
 
 - Follow Semantic Versioning (`MAJOR.MINOR.PATCH`)
 - Release tags format: `v{version}` (the legacy `release/v{version}` format is no longer used)
-- A new version must be newer than the latest published release
+- Prepare Release and the Release workflow require a new version to be newer than the latest
+  published release (a manually published release is not checked)
 
 ## License
 
