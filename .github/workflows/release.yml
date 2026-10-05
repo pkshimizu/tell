@@ -213,10 +213,7 @@ jobs:
   build-macos:
     name: Build macOS
     needs: check-version
-    # electron-builder 25 は署名用キーチェーンの解除に誤ったパスワードを渡しており
-    # （electron-userland/electron-builder#10066）、macos-26 の現行イメージでは署名に失敗する。
-    # electron-builder を修正版に上げるまで macos-15 に固定する（#199）
-    runs-on: macos-15
+    runs-on: macos-latest
     steps:
       - name: Validate macOS signing secrets
         env:
