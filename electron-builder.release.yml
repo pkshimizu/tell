@@ -19,6 +19,8 @@ mac:
   entitlements: build/entitlements.mac.plist
   notarize: true
 # 署名・公証する成果物なので、Electron 本体は非公式ミラーではなく公式配布元から取得する。
+# electron-builder 26 では .npmrc の electron_mirror がこの設定より優先されるため、CI では
+# npm の CLI フラグ（--electron_mirror）でも同じ配布元を指定している（release.yml）。
 electronDownload:
   mirror: https://github.com/electron/electron/releases/download/
 dmg:

@@ -10,7 +10,7 @@ This document provides information for developers who want to contribute to tell
 
 ### Requirements
 
-- Node.js 20.0.0 or higher (CI builds with Node.js 20)
+- Node.js 22.12.0 or higher (CI builds with Node.js 22)
 - npm 9.0.0 or higher
 - Git
 
