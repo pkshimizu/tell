@@ -175,7 +175,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -183,8 +183,10 @@ jobs:
 
       # ローカル設定（electron-builder.yml）は publish: null で更新設定を埋め込まないため、
       # リリースは更新情報ファイルと app-update.yml を生成する release 設定でビルドする。
+      # electron-builder 26 は .npmrc の electron_mirror を設定ファイルの electronDownload.mirror
+      # より優先するため、公式配布元を npm の CLI フラグで指定する（環境変数では .npmrc に負ける）
       - name: Build Windows app
-        run: npm run build:win -- --config electron-builder.release.yml
+        run: npm run build:win --electron_mirror=https://github.com/electron/electron/releases/download/ -- --config electron-builder.release.yml
 
       # 成果物のファイル名は release-state.mjs の releaseAssets が唯一の定義元。
       # その一覧に従って集め、latest.yml が実際のファイルを指していることを確かめる。
@@ -213,10 +215,9 @@ jobs:
   build-macos:
     name: Build macOS
     needs: check-version
-    # electron-builder 25 は署名用キーチェーンの解除に誤ったパスワードを渡しており
-    # （electron-userland/electron-builder#10066）、macos-26 の現行イメージでは署名に失敗する。
-    # electron-builder を修正版に上げるまで macos-15 に固定する（#199）
-    runs-on: macos-15
+    # macos-latest での署名には electron-builder >= 26.17.0（electron-userland/electron-builder#10101
+    # の修正）が必要。npm の latest タグ（26.15.3）は未修正なので、package.json の下限を下げないこと
+    runs-on: macos-latest
     steps:
       - name: Validate macOS signing secrets
         env:
@@ -243,14 +244,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build, sign, and notarize macOS app
-        run: npm run build:mac -- --config electron-builder.release.yml
+        # Electron 本体の取得元は build-windows と同じ理由で CLI フラグで公式配布元にする
+        run: npm run build:mac --electron_mirror=https://github.com/electron/electron/releases/download/ -- --config electron-builder.release.yml
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
